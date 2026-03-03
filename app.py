@@ -116,16 +116,17 @@ GOOGLE_FONTS = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;
 # Scene 1: パイプライン概要
 # ====================
 def build_pipeline_page():
+    """Scene 1: パイプライン概要ページ"""
     stats = get_medallion_stats()
     kpi = get_kpi_summary()
 
     stages = [
-        {"name": "Raw Sources", "cls": "", "icon": "📥", "stats": "CSV / API"},
-        {"name": "Bronze", "cls": "bronze", "icon": "🥉",
+        {"name": "Raw Sources", "cls": "", "stats": "CSV / API"},
+        {"name": "Bronze", "cls": "bronze",
          "stats": f'{stats["bronze"]["tables"]} テーブル / {stats["bronze"]["total_rows"]:,} 行'},
-        {"name": "Silver", "cls": "silver", "icon": "🥈",
+        {"name": "Silver", "cls": "silver",
          "stats": f'{stats["silver"]["tables"]} テーブル / {stats["silver"]["total_rows"]:,} 行'},
-        {"name": "Gold", "cls": "gold", "icon": "🥇",
+        {"name": "Gold", "cls": "gold",
          "stats": f'{stats["gold"]["tables"]} テーブル / {stats["gold"]["total_rows"]:,} 行'},
     ]
 
@@ -134,28 +135,31 @@ def build_pipeline_page():
         if i > 0:
             flow.append(html.Span("→", className="medallion-arrow"))
         flow.append(html.Div(className=f"medallion-stage {s['cls']}", children=[
-            html.Div(s["icon"], style={"fontSize": "2rem", "marginBottom": "8px"}),
-            html.Div(s["name"], style={"fontWeight": "700", "color": "white"}),
+            html.Div(s["name"], style={"fontWeight": "700", "color": "white", "fontSize": "1.1rem"}),
             html.Div(s["stats"], style={"fontSize": "0.75rem", "color": "#60a5fa", "fontWeight": "600", "marginTop": "8px"}),
         ]))
 
     return html.Div([
-        html.Div(className="hero-section", children=[
+        # ヒーローセクション（animate-reveal）
+        html.Div(className="hero-section animate-reveal", children=[
             html.H1("在庫管理統合プラットフォーム", className="hero-title"),
             html.P("Databricks Lakehouse で在庫データを統合し、AI で課題の真因に切り込む", className="hero-subtitle"),
         ]),
         html.Div(style={"height": "24px"}),
-        html.Div(className="chart-panel", children=[
-            html.Div(className="chart-title", children=["🏗️ Medallion Architecture"]),
+        # Medallion Architecture パネル（animate-reveal）
+        html.Div(className="chart-panel animate-reveal", children=[
+            html.Div(className="chart-title", children=["Medallion Architecture"]),
             html.Div(className="medallion-flow", children=flow),
         ]),
         html.Div(style={"height": "16px"}),
-        html.Div(className="chart-panel", children=[
-            html.Div(className="chart-title", children=["⚡ パイプラインステータス"]),
-            html.Div(style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "16px"}, children=[
-                html.Div(className="kpi-card", children=[
+        # パイプラインステータス（animate-reveal + KPI 非対称グリッド）
+        html.Div(className="chart-panel animate-reveal", children=[
+            html.Div(className="chart-title", children=["パイプラインステータス"]),
+            html.Div(style={"display": "grid", "gridTemplateColumns": "repeat(4, 1fr)", "gap": "16px"}, children=[
+                # メイン KPI: primary（2列幅で強調）
+                html.Div(className="kpi-card primary", children=[
                     html.Div("パイプライン", className="kpi-label"),
-                    html.Div("正常稼働", className="kpi-value", style={"fontSize": "1.3rem", "color": "#10b981"}),
+                    html.Div("正常稼働", className="kpi-value", style={"color": "#10b981"}),
                 ]),
                 html.Div(className="kpi-card", children=[
                     html.Div("品質チェック合格率", className="kpi-label"),
@@ -189,12 +193,15 @@ DASHBOARD_ID = os.environ.get(
 EMBED_URL = f"{WORKSPACE_URL}/embed/dashboardsv3/{DASHBOARD_ID}?o=0"
 
 def build_dashboard_page():
+    """Scene 2: ダッシュボードページ（AI/BI ダッシュボード iframe）"""
     return html.Div([
-        html.H2("📊 在庫管理統合ビュー", style={"fontWeight": "800", "color": "white", "margin": "0 0 8px 0"}),
+        html.H2("在庫管理統合ビュー", className="animate-reveal",
+                style={"fontWeight": "800", "color": "white", "margin": "0 0 8px 0"}),
         html.P("Databricks AI/BI ダッシュボードを Dash App 内にリアルタイム表示",
+               className="animate-reveal",
                style={"color": "#9ca3af", "fontSize": "0.85rem", "margin": "0 0 16px 0"}),
         # iframe 埋め込み
-        html.Div(className="chart-panel", style={"padding": "0", "overflow": "hidden"}, children=[
+        html.Div(className="chart-panel animate-reveal", style={"padding": "0", "overflow": "hidden"}, children=[
             html.Iframe(
                 src=EMBED_URL,
                 style={
@@ -212,30 +219,35 @@ def build_dashboard_page():
 # Scene 5: まとめ
 # ====================
 def build_summary_page():
+    """Scene 5: まとめ + CTA ページ"""
+    demo_items = [
+        ("データ統合", "Medallion Architecture で Single Source of Truth を確立"),
+        ("統合可視化", "部門横断ダッシュボードで在庫を一画面で俯瞰"),
+        ("AI エージェント分析", "Genie API を活用した自律的データ分析"),
+        ("アクション提案", "要因分析を自動化し、具体的な改善策を生成"),
+    ]
+
     return html.Div([
-        html.H2("🎯 まとめ", style={"fontWeight": "800", "color": "white", "margin": "0 0 16px 0"}),
-        html.Div(className="chart-panel", children=[
-            html.Div(className="chart-title", children=["📋 本日のデモ"]),
-            *[html.Div(style={"display": "flex", "gap": "16px", "padding": "12px", "borderRadius": "12px",
-                               "background": "rgba(59,130,246,0.05)", "border": "1px solid rgba(59,130,246,0.1)",
-                               "marginBottom": "8px"}, children=[
-                html.Span("✅", style={"fontSize": "1.3rem"}),
+        html.H2("まとめ", className="animate-reveal",
+                style={"fontWeight": "800", "color": "white", "margin": "0 0 16px 0"}),
+        html.Div(className="chart-panel animate-reveal", children=[
+            html.Div(className="chart-title", children=["本日のデモ"]),
+            *[html.Div(style={"display": "flex", "gap": "16px", "padding": "12px 16px", "borderRadius": "12px",
+                               "background": "rgba(14,165,233,0.05)", "border": "1px solid rgba(14,165,233,0.1)",
+                               "marginBottom": "8px", "alignItems": "center"}, children=[
+                html.Div(style={"width": "8px", "height": "8px", "borderRadius": "50%",
+                                "background": "var(--color-accent-primary)", "flexShrink": "0"}),
                 html.Div([html.Div(t, style={"fontWeight": "700", "color": "white"}),
                           html.Div(d, style={"fontSize": "0.85rem", "color": "#9ca3af"})]),
-            ]) for t, d in [
-                ("データ統合", "Medallion Architecture で Single Source of Truth を確立"),
-                ("統合可視化", "部門横断ダッシュボードで在庫を一画面で俯瞰"),
-                ("Genie: 自然言語探索", "SQL不要で日本語でデータを探索"),
-                ("リサーチエージェント", "要因分析を自動化、アクション提案まで生成"),
-            ]],
+            ]) for t, d in demo_items],
         ]),
         html.Div(style={"height": "16px"}),
-        html.Div(className="cta-section", children=[
-            html.Div("🎯", style={"fontSize": "3rem", "marginBottom": "16px"}),
-            html.Div("ワークショップに参加しませんか？", style={"fontSize": "1.3rem", "fontWeight": "800", "color": "white"}),
+        html.Div(className="cta-section animate-reveal", children=[
+            html.Div("ワークショップに参加しませんか？",
+                     style={"fontSize": "1.3rem", "fontWeight": "800", "color": "white"}),
             html.Div("貴社のデータで Databricks Lakehouse を半日で体験できます",
                      style={"color": "#9ca3af", "marginTop": "8px", "marginBottom": "24px"}),
-            html.A("📝 ワークショップに申し込む", href="#", className="cta-button"),
+            html.A("ワークショップに申し込む", href="#", className="cta-button"),
         ]),
     ])
 
@@ -246,36 +258,38 @@ def build_summary_page():
 app.layout = html.Div([
     html.Link(rel="stylesheet", href=GOOGLE_FONTS),
     # ヘッダー
+    # ヘッダー（アイコン削除済み）
     html.Div(className="app-header", children=[
         html.Div(style={"display": "flex", "justifyContent": "space-between", "alignItems": "center",
                          "height": "60px", "padding": "0 24px"}, children=[
             html.Div(style={"display": "flex", "alignItems": "center", "gap": "12px"}, children=[
-                html.Span("📦", style={"fontSize": "1.5rem"}),
-                html.Span("在庫管理統合プラットフォーム", style={"fontSize": "1.1rem", "fontWeight": "700", "color": "white"}),
-                html.Span("DEMO", style={"fontSize": "0.7rem", "fontWeight": "600", "color": "#60a5fa",
-                                         "background": "rgba(59,130,246,0.15)", "padding": "2px 8px", "borderRadius": "4px"}),
+                html.Span("在庫管理統合プラットフォーム",
+                          style={"fontSize": "1.1rem", "fontWeight": "700", "color": "white",
+                                 "fontFamily": "var(--font-display)"}),
+                html.Span("DEMO", style={"fontSize": "0.7rem", "fontWeight": "600", "color": "#38bdf8",
+                                         "background": "rgba(14,165,233,0.15)", "padding": "2px 8px", "borderRadius": "4px"}),
             ]),
         ]),
     ]),
-    # タブナビゲーション
+    # タブナビゲーション（アイコン削除済み）
     html.Div(style={"padding": "0 24px", "maxWidth": "1400px", "margin": "0 auto"}, children=[
         dcc.Tabs(id="page-tabs", value="pipeline", style={"marginTop": "16px"}, children=[
-            dcc.Tab(label="🏠 パイプライン概要", value="pipeline",
+            dcc.Tab(label="パイプライン概要", value="pipeline",
                     style={"color": "#9ca3af", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
-                    selected_style={"color": "#60a5fa", "backgroundColor": "rgba(59,130,246,0.1)",
-                                    "border": "none", "borderBottom": "2px solid #3b82f6", "padding": "10px 20px"}),
-            dcc.Tab(label="📊 ダッシュボード", value="dashboard",
+                    selected_style={"color": "#38bdf8", "backgroundColor": "rgba(14,165,233,0.1)",
+                                    "border": "none", "borderBottom": "2px solid #0ea5e9", "padding": "10px 20px"}),
+            dcc.Tab(label="ダッシュボード", value="dashboard",
                     style={"color": "#9ca3af", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
-                    selected_style={"color": "#60a5fa", "backgroundColor": "rgba(59,130,246,0.1)",
-                                    "border": "none", "borderBottom": "2px solid #3b82f6", "padding": "10px 20px"}),
-            dcc.Tab(label="🤖 AI エージェント", value="agent",
+                    selected_style={"color": "#38bdf8", "backgroundColor": "rgba(14,165,233,0.1)",
+                                    "border": "none", "borderBottom": "2px solid #0ea5e9", "padding": "10px 20px"}),
+            dcc.Tab(label="AI エージェント", value="agent",
                     style={"color": "#9ca3af", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
-                    selected_style={"color": "#60a5fa", "backgroundColor": "rgba(59,130,246,0.1)",
-                                    "border": "none", "borderBottom": "2px solid #3b82f6", "padding": "10px 20px"}),
-            dcc.Tab(label="🎯 まとめ", value="summary",
+                    selected_style={"color": "#38bdf8", "backgroundColor": "rgba(14,165,233,0.1)",
+                                    "border": "none", "borderBottom": "2px solid #0ea5e9", "padding": "10px 20px"}),
+            dcc.Tab(label="まとめ", value="summary",
                     style={"color": "#9ca3af", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
-                    selected_style={"color": "#60a5fa", "backgroundColor": "rgba(59,130,246,0.1)",
-                                    "border": "none", "borderBottom": "2px solid #3b82f6", "padding": "10px 20px"}),
+                    selected_style={"color": "#38bdf8", "backgroundColor": "rgba(14,165,233,0.1)",
+                                    "border": "none", "borderBottom": "2px solid #0ea5e9", "padding": "10px 20px"}),
         ]),
         html.Div(id="page-content", style={"paddingTop": "24px"}),
     ]),
@@ -302,18 +316,28 @@ def render_page(tab):
 # Scene 3: AI エージェントチャット
 # ====================
 def build_agent_page():
-    """AI エージェントチャット UI"""
-    initial_msg = html.Div(className="chat-message assistant-msg", children=[
-        html.Div("🤖", style={"fontSize": "1.5rem", "marginRight": "12px"}),
+    """Scene 3: AI エージェントチャット UI"""
+    # ウェルカムカード（m-4: 空の状態デザイン改善）
+    welcome_card = html.Div(className="chat-message assistant-msg", children=[
         html.Div(children=[
-            html.Strong("在庫分析アシスタント"),
-            html.P("こんにちは！在庫データについて何でもお聞きください。", style={"margin": "4px 0 8px"}),
+            # ウェルカムヘッダー
+            html.Div(style={"marginBottom": "12px"}, children=[
+                html.Div("在庫分析アシスタント",
+                         style={"fontFamily": "var(--font-display)", "fontWeight": "700",
+                                "fontSize": "1.1rem", "color": "white", "marginBottom": "4px"}),
+                html.Div("Genie API を活用し、在庫データの分析とインサイトの提供を行います。",
+                         style={"fontSize": "0.85rem", "color": "#9ca3af", "lineHeight": "1.6"}),
+            ]),
+            # サジェスチョンチップ
+            html.Div("質問の例:", style={"fontSize": "0.75rem", "color": "#6b7280",
+                                        "textTransform": "uppercase", "letterSpacing": "0.05em",
+                                        "marginBottom": "8px", "fontWeight": "600"}),
             html.Div(style={"display": "flex", "gap": "8px", "flexWrap": "wrap"}, children=[
                 html.Button(q, id={"type": "suggestion-btn", "index": i},
                             className="suggestion-chip",
-                            style={"padding": "6px 14px", "borderRadius": "20px",
-                                   "border": "1px solid rgba(96,165,250,0.3)",
-                                   "background": "rgba(59,130,246,0.08)", "color": "#93c5fd",
+                            style={"padding": "8px 16px", "borderRadius": "20px",
+                                   "border": "1px solid rgba(14,165,233,0.3)",
+                                   "background": "rgba(14,165,233,0.08)", "color": "#7dd3fc",
                                    "fontSize": "0.8rem", "cursor": "pointer"})
                 for i, q in enumerate([
                     "在庫総額の概要を教えて",
@@ -326,16 +350,20 @@ def build_agent_page():
     ])
 
     return html.Div([
-        html.H2("🤖 在庫分析 AI エージェント", style={"fontWeight": "800", "color": "white", "margin": "0 0 4px"}),
+        html.H2("在庫分析 AI エージェント", className="animate-reveal",
+                style={"fontWeight": "800", "color": "white", "margin": "0 0 4px"}),
         html.P("Genie API を活用し、自然言語で在庫データを分析",
+               className="animate-reveal",
                style={"color": "#9ca3af", "fontSize": "0.85rem", "margin": "0 0 16px"}),
-        # チャットエリア
-        html.Div(className="chart-panel", style={"padding": "0", "display": "flex", "flexDirection": "column", "height": "70vh"}, children=[
+        # チャットエリア（animate-reveal）
+        html.Div(className="chart-panel animate-reveal",
+                 style={"padding": "0", "display": "flex", "flexDirection": "column", "height": "70vh",
+                        "borderLeft": "3px solid var(--color-accent-primary)"}, children=[
             # メッセージ表示エリア
             html.Div(id="chat-messages", style={
                 "flex": "1", "overflowY": "auto", "padding": "20px",
                 "display": "flex", "flexDirection": "column", "gap": "16px",
-            }, children=[initial_msg]),
+            }, children=[welcome_card]),
             # 入力エリア
             html.Div(style={
                 "padding": "16px 20px",
@@ -350,9 +378,9 @@ def build_agent_page():
                                  "borderRadius": "12px", "color": "#e5e7eb",
                                  "fontSize": "0.95rem", "outline": "none"},
                           debounce=True),
+                # 送信ボタン: CSS に委譲（紫排除）
                 html.Button("送信", id="chat-send-btn",
                             style={"padding": "12px 24px",
-                                   "background": "linear-gradient(135deg, #3b82f6, #8b5cf6)",
                                    "color": "white", "border": "none", "borderRadius": "12px",
                                    "fontWeight": "600", "cursor": "pointer", "fontSize": "0.95rem"}),
             ]),
@@ -380,12 +408,12 @@ def handle_chat(n_clicks, n_submit, user_input, current_messages, history):
 
     question = user_input.strip()
 
-    # ユーザーメッセージを追加
+    # ユーザーメッセージを追加（紫排除 → シアン系グラデーション）
     user_msg = html.Div(className="chat-message user-msg", style={
         "alignSelf": "flex-end", "maxWidth": "75%",
     }, children=[
         html.Div(question, style={
-            "background": "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+            "background": "linear-gradient(135deg, #0284c7, #06b6d4)",
             "padding": "12px 16px", "borderRadius": "16px 16px 4px 16px",
             "color": "white", "lineHeight": "1.6",
         }),
@@ -395,13 +423,12 @@ def handle_chat(n_clicks, n_submit, user_input, current_messages, history):
     from tools.genie_tool import query_genie
     genie_result = query_genie(question)
 
-    # アシスタントメッセージを作成
+    # アシスタントメッセージを作成（アイコン削除、フォント修正）
     assistant_msg = html.Div(className="chat-message assistant-msg", children=[
-        html.Div("🤖", style={"fontSize": "1.5rem", "marginRight": "12px", "flexShrink": "0"}),
         html.Div(children=[
             html.Pre(genie_result, style={
                 "whiteSpace": "pre-wrap", "wordWrap": "break-word",
-                "fontFamily": "'Inter', 'Noto Sans JP', monospace",
+                "fontFamily": "var(--font-body)",
                 "fontSize": "0.9rem", "lineHeight": "1.7",
                 "margin": "0", "color": "#e5e7eb",
             }),
