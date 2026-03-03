@@ -19,12 +19,12 @@ import numpy as np
 # 定数・テーマ
 # ====================
 PLOTLY_THEME = {
-    "paper_bgcolor": "rgba(0,0,0,0)",
-    "plot_bgcolor": "rgba(0,0,0,0)",
-    "font": {"color": "#e5e7eb", "family": "Space Grotesk, Noto Sans JP, sans-serif", "size": 12},
+    "paper_bgcolor": "rgba(255,255,255,0)",
+    "plot_bgcolor": "rgba(255,255,255,0)",
+    "font": {"color": "#374151", "family": "Noto Sans JP, sans-serif", "size": 12},
     "margin": {"l": 40, "r": 20, "t": 30, "b": 40},
-    "xaxis": {"gridcolor": "rgba(255,255,255,0.05)", "zeroline": False},
-    "yaxis": {"gridcolor": "rgba(255,255,255,0.05)", "zeroline": False},
+    "xaxis": {"gridcolor": "rgba(0,0,0,0.06)", "zeroline": False},
+    "yaxis": {"gridcolor": "rgba(0,0,0,0.06)", "zeroline": False},
 }
 CATEGORY_COLORS = {"A": "#0ea5e9", "B": "#ef4444", "C": "#10b981", "D": "#f59e0b"}
 CATEGORY_NAMES = {"A": "機械部品", "B": "電子部品", "C": "素材・原料", "D": "包装・梱包材"}
@@ -109,7 +109,7 @@ def get_supplier_leadtime():
 app = Dash(__name__, suppress_callback_exceptions=True,
            title="在庫管理統合プラットフォーム | Databricks Lakehouse")
 
-GOOGLE_FONTS = "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap"
+GOOGLE_FONTS = "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap"
 
 
 # ====================
@@ -135,8 +135,8 @@ def build_pipeline_page():
         if i > 0:
             flow.append(html.Span("→", className="medallion-arrow"))
         flow.append(html.Div(className=f"medallion-stage {s['cls']}", children=[
-            html.Div(s["name"], style={"fontWeight": "700", "color": "white", "fontSize": "1.1rem"}),
-            html.Div(s["stats"], style={"fontSize": "0.75rem", "color": "#60a5fa", "fontWeight": "600", "marginTop": "8px"}),
+            html.Div(s["name"], style={"fontWeight": "700", "color": "#1f2937", "fontSize": "1.05rem"}),
+            html.Div(s["stats"], style={"fontSize": "0.75rem", "color": "#6b7280", "fontWeight": "600", "marginTop": "8px"}),
         ]))
 
     return html.Div([
@@ -159,7 +159,7 @@ def build_pipeline_page():
                 # メイン KPI: primary（2列幅で強調）
                 html.Div(className="kpi-card primary", children=[
                     html.Div("パイプライン", className="kpi-label"),
-                    html.Div("正常稼働", className="kpi-value", style={"color": "#10b981"}),
+                    html.Div("正常稼働", className="kpi-value", style={"color": "var(--color-accent-green)"}),
                 ]),
                 html.Div(className="kpi-card", children=[
                     html.Div("品質チェック合格率", className="kpi-label"),
@@ -196,10 +196,10 @@ def build_dashboard_page():
     """Scene 2: ダッシュボードページ（AI/BI ダッシュボード iframe）"""
     return html.Div([
         html.H2("在庫管理統合ビュー", className="animate-reveal",
-                style={"fontWeight": "800", "color": "white", "margin": "0 0 8px 0"}),
+                style={"fontWeight": "800", "color": "var(--color-text-primary)", "margin": "0 0 8px 0"}),
         html.P("Databricks AI/BI ダッシュボードを Dash App 内にリアルタイム表示",
                className="animate-reveal",
-               style={"color": "#9ca3af", "fontSize": "0.85rem", "margin": "0 0 16px 0"}),
+               style={"color": "var(--color-text-secondary)", "fontSize": "0.85rem", "margin": "0 0 16px 0"}),
         # iframe 埋め込み
         html.Div(className="chart-panel animate-reveal", style={"padding": "0", "overflow": "hidden"}, children=[
             html.Iframe(
@@ -229,24 +229,24 @@ def build_summary_page():
 
     return html.Div([
         html.H2("まとめ", className="animate-reveal",
-                style={"fontWeight": "800", "color": "white", "margin": "0 0 16px 0"}),
+                style={"fontWeight": "800", "color": "var(--color-text-primary)", "margin": "0 0 16px 0"}),
         html.Div(className="chart-panel animate-reveal", children=[
             html.Div(className="chart-title", children=["本日のデモ"]),
-            *[html.Div(style={"display": "flex", "gap": "16px", "padding": "12px 16px", "borderRadius": "12px",
-                               "background": "rgba(14,165,233,0.05)", "border": "1px solid rgba(14,165,233,0.1)",
+            *[html.Div(style={"display": "flex", "gap": "16px", "padding": "12px 16px", "borderRadius": "8px",
+                               "background": "#f0f9ff", "border": "1px solid #e0f2fe",
                                "marginBottom": "8px", "alignItems": "center"}, children=[
                 html.Div(style={"width": "8px", "height": "8px", "borderRadius": "50%",
                                 "background": "var(--color-accent-primary)", "flexShrink": "0"}),
-                html.Div([html.Div(t, style={"fontWeight": "700", "color": "white"}),
-                          html.Div(d, style={"fontSize": "0.85rem", "color": "#9ca3af"})]),
+                html.Div([html.Div(t, style={"fontWeight": "700", "color": "var(--color-text-primary)"}),
+                          html.Div(d, style={"fontSize": "0.85rem", "color": "var(--color-text-secondary)"})]),
             ]) for t, d in demo_items],
         ]),
         html.Div(style={"height": "16px"}),
         html.Div(className="cta-section animate-reveal", children=[
             html.Div("ワークショップに参加しませんか？",
-                     style={"fontSize": "1.3rem", "fontWeight": "800", "color": "white"}),
+                     style={"fontSize": "1.3rem", "fontWeight": "800"}),
             html.Div("貴社のデータで Databricks Lakehouse を半日で体験できます",
-                     style={"color": "#9ca3af", "marginTop": "8px", "marginBottom": "24px"}),
+                     style={"color": "rgba(255,255,255,0.8)", "marginTop": "8px", "marginBottom": "24px"}),
             html.A("ワークショップに申し込む", href="#", className="cta-button"),
         ]),
     ])
@@ -264,10 +264,9 @@ app.layout = html.Div([
                          "height": "60px", "padding": "0 24px"}, children=[
             html.Div(style={"display": "flex", "alignItems": "center", "gap": "12px"}, children=[
                 html.Span("在庫管理統合プラットフォーム",
-                          style={"fontSize": "1.1rem", "fontWeight": "700", "color": "white",
-                                 "fontFamily": "var(--font-display)"}),
-                html.Span("DEMO", style={"fontSize": "0.7rem", "fontWeight": "600", "color": "#38bdf8",
-                                         "background": "rgba(14,165,233,0.15)", "padding": "2px 8px", "borderRadius": "4px"}),
+                          style={"fontSize": "1.1rem", "fontWeight": "700", "color": "var(--color-text-primary)"}),
+                html.Span("DEMO", style={"fontSize": "0.7rem", "fontWeight": "600", "color": "var(--color-accent-primary)",
+                                         "background": "#e0f2fe", "padding": "2px 8px", "borderRadius": "4px"}),
             ]),
         ]),
     ]),
@@ -275,27 +274,27 @@ app.layout = html.Div([
     html.Div(style={"padding": "0 24px", "maxWidth": "1400px", "margin": "0 auto"}, children=[
         dcc.Tabs(id="page-tabs", value="pipeline", style={"marginTop": "16px"}, children=[
             dcc.Tab(label="パイプライン概要", value="pipeline",
-                    style={"color": "#9ca3af", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
-                    selected_style={"color": "#38bdf8", "backgroundColor": "rgba(14,165,233,0.1)",
-                                    "border": "none", "borderBottom": "2px solid #0ea5e9", "padding": "10px 20px"}),
+                    style={"color": "#6b7280", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
+                    selected_style={"color": "var(--color-accent-primary)", "backgroundColor": "#f0f9ff",
+                                    "border": "none", "borderBottom": "2px solid var(--color-accent-primary)", "padding": "10px 20px"}),
             dcc.Tab(label="ダッシュボード", value="dashboard",
-                    style={"color": "#9ca3af", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
-                    selected_style={"color": "#38bdf8", "backgroundColor": "rgba(14,165,233,0.1)",
-                                    "border": "none", "borderBottom": "2px solid #0ea5e9", "padding": "10px 20px"}),
+                    style={"color": "#6b7280", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
+                    selected_style={"color": "var(--color-accent-primary)", "backgroundColor": "#f0f9ff",
+                                    "border": "none", "borderBottom": "2px solid var(--color-accent-primary)", "padding": "10px 20px"}),
             dcc.Tab(label="AI エージェント", value="agent",
-                    style={"color": "#9ca3af", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
-                    selected_style={"color": "#38bdf8", "backgroundColor": "rgba(14,165,233,0.1)",
-                                    "border": "none", "borderBottom": "2px solid #0ea5e9", "padding": "10px 20px"}),
+                    style={"color": "#6b7280", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
+                    selected_style={"color": "var(--color-accent-primary)", "backgroundColor": "#f0f9ff",
+                                    "border": "none", "borderBottom": "2px solid var(--color-accent-primary)", "padding": "10px 20px"}),
             dcc.Tab(label="まとめ", value="summary",
-                    style={"color": "#9ca3af", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
-                    selected_style={"color": "#38bdf8", "backgroundColor": "rgba(14,165,233,0.1)",
-                                    "border": "none", "borderBottom": "2px solid #0ea5e9", "padding": "10px 20px"}),
+                    style={"color": "#6b7280", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
+                    selected_style={"color": "var(--color-accent-primary)", "backgroundColor": "#f0f9ff",
+                                    "border": "none", "borderBottom": "2px solid var(--color-accent-primary)", "padding": "10px 20px"}),
         ]),
         html.Div(id="page-content", style={"paddingTop": "24px"}),
     ]),
     # フッター
-    html.Div(style={"padding": "24px", "textAlign": "center", "borderTop": "1px solid rgba(255,255,255,0.05)", "marginTop": "48px"},
-             children=[html.Span("Powered by Databricks Lakehouse Platform", style={"fontSize": "0.85rem", "color": "#6b7280"})]),
+    html.Div(style={"padding": "24px", "textAlign": "center", "borderTop": "1px solid #e5e7eb", "marginTop": "48px"},
+             children=[html.Span("Powered by Databricks Lakehouse Platform", style={"fontSize": "0.85rem", "color": "#9ca3af"})]),
 ])
 
 
@@ -324,9 +323,9 @@ def build_agent_page():
             html.Div(style={"marginBottom": "12px"}, children=[
                 html.Div("在庫分析アシスタント",
                          style={"fontFamily": "var(--font-display)", "fontWeight": "700",
-                                "fontSize": "1.1rem", "color": "white", "marginBottom": "4px"}),
+                                "fontSize": "1.1rem", "color": "var(--color-text-primary)", "marginBottom": "4px"}),
                 html.Div("Genie API を活用し、在庫データの分析とインサイトの提供を行います。",
-                         style={"fontSize": "0.85rem", "color": "#9ca3af", "lineHeight": "1.6"}),
+                         style={"fontSize": "0.85rem", "color": "var(--color-text-secondary)", "lineHeight": "1.6"}),
             ]),
             # サジェスチョンチップ
             html.Div("質問の例:", style={"fontSize": "0.75rem", "color": "#6b7280",
@@ -336,8 +335,8 @@ def build_agent_page():
                 html.Button(q, id={"type": "suggestion-btn", "index": i},
                             className="suggestion-chip",
                             style={"padding": "8px 16px", "borderRadius": "20px",
-                                   "border": "1px solid rgba(14,165,233,0.3)",
-                                   "background": "rgba(14,165,233,0.08)", "color": "#7dd3fc",
+                                   "border": "1px solid #bae6fd",
+                                   "background": "#f0f9ff", "color": "#0369a1",
                                    "fontSize": "0.8rem", "cursor": "pointer"})
                 for i, q in enumerate([
                     "在庫総額の概要を教えて",
@@ -351,10 +350,10 @@ def build_agent_page():
 
     return html.Div([
         html.H2("在庫分析 AI エージェント", className="animate-reveal",
-                style={"fontWeight": "800", "color": "white", "margin": "0 0 4px"}),
+                style={"fontWeight": "800", "color": "var(--color-text-primary)", "margin": "0 0 4px"}),
         html.P("Genie API を活用し、自然言語で在庫データを分析",
                className="animate-reveal",
-               style={"color": "#9ca3af", "fontSize": "0.85rem", "margin": "0 0 16px"}),
+               style={"color": "var(--color-text-secondary)", "fontSize": "0.85rem", "margin": "0 0 16px"}),
         # チャットエリア（animate-reveal）
         html.Div(className="chart-panel animate-reveal",
                  style={"padding": "0", "display": "flex", "flexDirection": "column", "height": "70vh",
@@ -373,15 +372,15 @@ def build_agent_page():
                 dcc.Input(id="chat-input", type="text",
                           placeholder="在庫について質問してください...",
                           style={"flex": "1", "padding": "12px 16px",
-                                 "background": "rgba(255,255,255,0.05)",
-                                 "border": "1px solid rgba(255,255,255,0.1)",
-                                 "borderRadius": "12px", "color": "#e5e7eb",
+                                 "background": "#f9fafb",
+                                 "border": "1px solid #e5e7eb",
+                                 "borderRadius": "12px", "color": "#1f2937",
                                  "fontSize": "0.95rem", "outline": "none"},
                           debounce=True),
-                # 送信ボタン: CSS に委譲（紫排除）
+                # 送信ボタン
                 html.Button("送信", id="chat-send-btn",
                             style={"padding": "12px 24px",
-                                   "color": "white", "border": "none", "borderRadius": "12px",
+                                   "color": "white", "border": "none", "borderRadius": "8px",
                                    "fontWeight": "600", "cursor": "pointer", "fontSize": "0.95rem"}),
             ]),
         ]),
@@ -408,12 +407,12 @@ def handle_chat(n_clicks, n_submit, user_input, current_messages, history):
 
     question = user_input.strip()
 
-    # ユーザーメッセージを追加（紫排除 → シアン系グラデーション）
+    # ユーザーメッセージを追加
     user_msg = html.Div(className="chat-message user-msg", style={
         "alignSelf": "flex-end", "maxWidth": "75%",
     }, children=[
         html.Div(question, style={
-            "background": "linear-gradient(135deg, #0284c7, #06b6d4)",
+            "background": "var(--color-accent-primary)",
             "padding": "12px 16px", "borderRadius": "16px 16px 4px 16px",
             "color": "white", "lineHeight": "1.6",
         }),
@@ -423,14 +422,14 @@ def handle_chat(n_clicks, n_submit, user_input, current_messages, history):
     from tools.genie_tool import query_genie
     genie_result = query_genie(question)
 
-    # アシスタントメッセージを作成（アイコン削除、フォント修正）
+    # アシスタントメッセージを作成
     assistant_msg = html.Div(className="chat-message assistant-msg", children=[
         html.Div(children=[
             html.Pre(genie_result, style={
                 "whiteSpace": "pre-wrap", "wordWrap": "break-word",
                 "fontFamily": "var(--font-body)",
                 "fontSize": "0.9rem", "lineHeight": "1.7",
-                "margin": "0", "color": "#e5e7eb",
+                "margin": "0", "color": "var(--color-text-primary)",
             }),
         ]),
     ])
