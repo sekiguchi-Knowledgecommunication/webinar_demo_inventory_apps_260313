@@ -1,0 +1,487 @@
+{
+    "datasets": [
+        {
+            "name": "inventory_kpi",
+            "displayName": "在庫KPI",
+            "query": "SELECT\n  SUM(avg_inventory_value) as total_value,\n  COUNT(DISTINCT item_id) as total_items\nFROM apps_demo_catalog.webinar_demo_0313.inventory_summary\nWHERE month = (\n  SELECT MAX(month) FROM apps_demo_catalog.webinar_demo_0313.inventory_summary\n)"
+        },
+        {
+            "name": "turnover_kpi",
+            "displayName": "回転率KPI",
+            "query": "SELECT\n  AVG(avg_turnover_rate) as avg_turnover\nFROM apps_demo_catalog.webinar_demo_0313.turnover_analysis"
+        },
+        {
+            "name": "overstock_kpi",
+            "displayName": "過剰在庫KPI",
+            "query": "SELECT COUNT(DISTINCT item_id) as overstock_count\nFROM apps_demo_catalog.webinar_demo_0313.overstock_alert\nWHERE days_on_hand >= 90"
+        },
+        {
+            "name": "inventory_trend",
+            "displayName": "在庫推移",
+            "query": "SELECT\n  month,\n  category,\n  SUM(avg_inventory_value) as avg_inventory_value\nFROM apps_demo_catalog.webinar_demo_0313.inventory_summary\nGROUP BY month, category\nORDER BY month, category"
+        },
+        {
+            "name": "category_breakdown",
+            "displayName": "カテゴリ別構成",
+            "query": "SELECT\n  category,\n  SUM(avg_inventory_value) as total_value,\n  COUNT(DISTINCT item_id) as item_count\nFROM apps_demo_catalog.webinar_demo_0313.inventory_summary\nWHERE month = (\n  SELECT MAX(month) FROM apps_demo_catalog.webinar_demo_0313.inventory_summary\n)\nGROUP BY category\nORDER BY total_value DESC"
+        },
+        {
+            "name": "overstock_alerts",
+            "displayName": "過剰在庫アラート",
+            "query": "SELECT\n  item_id,\n  item_name,\n  category,\n  turnover_rate,\n  days_on_hand,\n  avg_inventory_value\nFROM apps_demo_catalog.webinar_demo_0313.overstock_alert\nWHERE days_on_hand >= 60\nORDER BY days_on_hand DESC\nLIMIT 20"
+        },
+        {
+            "name": "turnover_trend",
+            "displayName": "回転率推移",
+            "query": "SELECT\n  month,\n  category,\n  avg_turnover_rate\nFROM apps_demo_catalog.webinar_demo_0313.turnover_analysis\nORDER BY month, category"
+        },
+        {
+            "name": "supplier_leadtime",
+            "displayName": "サプライヤーリードタイム",
+            "query": "SELECT\n  supplier_id,\n  AVG(lead_time_actual_days) as avg_lead_time\nFROM apps_demo_catalog.webinar_demo_0313.receipts\nGROUP BY supplier_id\nORDER BY avg_lead_time DESC\nLIMIT 15"
+        }
+    ],
+    "pages": [
+        {
+            "name": "inventory_overview",
+            "displayName": "在庫管理統合ビュー",
+            "layout": [
+                {
+                    "widget": {
+                        "name": "kpi_total_value",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "inventory_kpi",
+                                    "fields": [
+                                        {
+                                            "name": "sum(total_value)",
+                                            "expression": "SUM(`total_value`)"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 2,
+                            "widgetType": "counter",
+                            "encodings": {
+                                "value": {
+                                    "fieldName": "sum(total_value)"
+                                }
+                            },
+                            "frame": {
+                                "showTitle": true,
+                                "title": "在庫総額（当月）",
+                                "showDescription": false
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 2,
+                        "height": 2
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "kpi_turnover",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "turnover_kpi",
+                                    "fields": [
+                                        {
+                                            "name": "sum(avg_turnover)",
+                                            "expression": "SUM(`avg_turnover`)"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 2,
+                            "widgetType": "counter",
+                            "encodings": {
+                                "value": {
+                                    "fieldName": "sum(avg_turnover)"
+                                }
+                            },
+                            "frame": {
+                                "showTitle": true,
+                                "title": "平均在庫回転率",
+                                "showDescription": false
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 2,
+                        "y": 0,
+                        "width": 2,
+                        "height": 2
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "kpi_overstock",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "overstock_kpi",
+                                    "fields": [
+                                        {
+                                            "name": "sum(overstock_count)",
+                                            "expression": "SUM(`overstock_count`)"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 2,
+                            "widgetType": "counter",
+                            "encodings": {
+                                "value": {
+                                    "fieldName": "sum(overstock_count)"
+                                }
+                            },
+                            "frame": {
+                                "showTitle": true,
+                                "title": "過剰在庫品目数",
+                                "showDescription": false
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 4,
+                        "y": 0,
+                        "width": 2,
+                        "height": 2
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "chart_inventory_trend",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "inventory_trend",
+                                    "fields": [
+                                        {
+                                            "name": "category",
+                                            "expression": "`category`"
+                                        },
+                                        {
+                                            "name": "monthly(month)",
+                                            "expression": "DATE_TRUNC(\"MONTH\", `month`)"
+                                        },
+                                        {
+                                            "name": "sum(avg_inventory_value)",
+                                            "expression": "SUM(`avg_inventory_value`)"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 3,
+                            "widgetType": "area",
+                            "encodings": {
+                                "x": {
+                                    "fieldName": "monthly(month)",
+                                    "scale": {
+                                        "type": "temporal"
+                                    }
+                                },
+                                "y": {
+                                    "fieldName": "sum(avg_inventory_value)",
+                                    "scale": {
+                                        "type": "quantitative"
+                                    }
+                                },
+                                "color": {
+                                    "fieldName": "category",
+                                    "scale": {
+                                        "type": "categorical"
+                                    }
+                                }
+                            },
+                            "frame": {
+                                "showTitle": true,
+                                "title": "📈 在庫総額推移（カテゴリ別・月次）",
+                                "showDescription": false
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 0,
+                        "y": 2,
+                        "width": 3,
+                        "height": 4
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "chart_category_breakdown",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "category_breakdown",
+                                    "fields": [
+                                        {
+                                            "name": "category",
+                                            "expression": "`category`"
+                                        },
+                                        {
+                                            "name": "sum(total_value)",
+                                            "expression": "SUM(`total_value`)"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 3,
+                            "widgetType": "bar",
+                            "encodings": {
+                                "x": {
+                                    "fieldName": "category",
+                                    "scale": {
+                                        "type": "categorical"
+                                    }
+                                },
+                                "y": {
+                                    "fieldName": "sum(total_value)",
+                                    "scale": {
+                                        "type": "quantitative"
+                                    }
+                                },
+                                "color": {
+                                    "fieldName": "category",
+                                    "scale": {
+                                        "type": "categorical"
+                                    }
+                                }
+                            },
+                            "frame": {
+                                "showTitle": true,
+                                "title": "🗂️ カテゴリ別在庫構成",
+                                "showDescription": false
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 3,
+                        "y": 2,
+                        "width": 3,
+                        "height": 4
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "table_overstock_alert",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "overstock_alerts",
+                                    "fields": [
+                                        {
+                                            "name": "item_id",
+                                            "expression": "`item_id`"
+                                        },
+                                        {
+                                            "name": "item_name",
+                                            "expression": "`item_name`"
+                                        },
+                                        {
+                                            "name": "category",
+                                            "expression": "`category`"
+                                        },
+                                        {
+                                            "name": "turnover_rate",
+                                            "expression": "`turnover_rate`"
+                                        },
+                                        {
+                                            "name": "days_on_hand",
+                                            "expression": "`days_on_hand`"
+                                        },
+                                        {
+                                            "name": "avg_inventory_value",
+                                            "expression": "`avg_inventory_value`"
+                                        }
+                                    ],
+                                    "disaggregated": true
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 2,
+                            "widgetType": "table",
+                            "encodings": {
+                                "columns": [
+                                    {
+                                        "fieldName": "item_id"
+                                    },
+                                    {
+                                        "fieldName": "item_name"
+                                    },
+                                    {
+                                        "fieldName": "category"
+                                    },
+                                    {
+                                        "fieldName": "turnover_rate"
+                                    },
+                                    {
+                                        "fieldName": "days_on_hand"
+                                    },
+                                    {
+                                        "fieldName": "avg_inventory_value"
+                                    }
+                                ]
+                            },
+                            "frame": {
+                                "showTitle": true,
+                                "title": "🚨 過剰在庫アラート",
+                                "showDescription": false
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 0,
+                        "y": 6,
+                        "width": 6,
+                        "height": 4
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "chart_turnover_trend",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "turnover_trend",
+                                    "fields": [
+                                        {
+                                            "name": "category",
+                                            "expression": "`category`"
+                                        },
+                                        {
+                                            "name": "monthly(month)",
+                                            "expression": "DATE_TRUNC(\"MONTH\", `month`)"
+                                        },
+                                        {
+                                            "name": "sum(avg_turnover_rate)",
+                                            "expression": "SUM(`avg_turnover_rate`)"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 3,
+                            "widgetType": "line",
+                            "encodings": {
+                                "x": {
+                                    "fieldName": "monthly(month)",
+                                    "scale": {
+                                        "type": "temporal"
+                                    }
+                                },
+                                "y": {
+                                    "fieldName": "sum(avg_turnover_rate)",
+                                    "scale": {
+                                        "type": "quantitative"
+                                    }
+                                },
+                                "color": {
+                                    "fieldName": "category",
+                                    "scale": {
+                                        "type": "categorical"
+                                    }
+                                }
+                            },
+                            "frame": {
+                                "showTitle": true,
+                                "title": "💹 カテゴリ別回転率推移",
+                                "showDescription": false
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 0,
+                        "y": 10,
+                        "width": 3,
+                        "height": 4
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "chart_leadtime",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "supplier_leadtime",
+                                    "fields": [
+                                        {
+                                            "name": "sum(avg_lead_time)",
+                                            "expression": "SUM(`avg_lead_time`)"
+                                        },
+                                        {
+                                            "name": "supplier_id",
+                                            "expression": "`supplier_id`"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 3,
+                            "widgetType": "bar",
+                            "encodings": {
+                                "x": {
+                                    "fieldName": "sum(avg_lead_time)",
+                                    "scale": {
+                                        "type": "quantitative"
+                                    }
+                                },
+                                "y": {
+                                    "fieldName": "supplier_id",
+                                    "scale": {
+                                        "type": "categorical"
+                                    }
+                                }
+                            },
+                            "frame": {
+                                "showTitle": true,
+                                "title": "🚚 サプライヤー別リードタイム",
+                                "showDescription": false
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 3,
+                        "y": 10,
+                        "width": 3,
+                        "height": 4
+                    }
+                }
+            ]
+        }
+    ]
+}

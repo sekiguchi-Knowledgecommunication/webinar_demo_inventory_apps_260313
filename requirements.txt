@@ -1,0 +1,4 @@
+# Databricks Apps プリインストール: dash, plotly
+# 以下は追加依存のみ
+pandas>=2.0.0
+numpy>=1.24.0

@@ -1,0 +1,4 @@
+# Databricks Apps 実行構成
+command:
+  - python
+  - app.py
