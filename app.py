@@ -13,7 +13,7 @@ import re
 import sys
 import dash
 from dash import Dash, html, dcc, callback, Input, Output, State, ALL, callback_context, no_update
-from flask import send_file, request, ALL
+from flask import send_file, request
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
