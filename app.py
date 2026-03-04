@@ -185,23 +185,27 @@ def build_pipeline_page():
 #    （アプリ自身の URL になり iframe が入れ子ループになる）
 #    代わりに DATABRICKS_WORKSPACE_URL を使用する
 WORKSPACE_URL = os.environ.get(
-    "DATABRICKS_WORKSPACE_URL",
-    "https://dbc-e852234c-8d1e.cloud.databricks.com"
-)
+    "DATABRICKS_WORKSPACE_URL", ""
+) or "https://dbc-e852234c-8d1e.cloud.databricks.com"
 DASHBOARD_ID = os.environ.get(
-    "DASHBOARD_ID",
-    "01f116d5e20611fb9cb1f97f9d1aa817"
-)
+    "DASHBOARD_ID", ""
+) or "01f116d5e20611fb9cb1f97f9d1aa817"
 # 公開ダッシュボードの埋め込み URL
 EMBED_URL = f"{WORKSPACE_URL}/embed/dashboardsv3/{DASHBOARD_ID}?o=0"
 
 # AI エージェント設定
-from agent import inventory_agent
-import asyncio
-import nest_asyncio
-nest_asyncio.apply()
-from agents import Runner
 logger = logging.getLogger(__name__)
+try:
+    from agent import inventory_agent
+    import asyncio
+    import nest_asyncio
+    nest_asyncio.apply()
+    from agents import Runner
+    AGENT_AVAILABLE = True
+    logger.info("✅ AI エージェント初期化成功")
+except Exception as e:
+    AGENT_AVAILABLE = False
+    logger.error(f"⚠️ AI エージェント初期化失敗（フォールバックモード）: {e}")
 
 def build_dashboard_page():
     """Scene 2: ダッシュボードページ（AI/BI ダッシュボード iframe）"""
@@ -456,8 +460,13 @@ def _call_agent(question: str, history: list) -> str:
     """
     AI エージェントを直接呼び出す（公式パターン: AsyncDatabricksOpenAI）。
     Serving Endpoint を経由せず、アプリ内で Runner.run() を実行。
-    GENIE_SPACE_ID 未設定時はフォールバック（ダミーデータ）。
+    エージェント未初期化時はフォールバック（ダミーデータ）。
     """
+    if not AGENT_AVAILABLE:
+        logger.info("エージェント未初期化 — フォールバックモードで Genie を直接呼び出し")
+        from tools.genie_tool import query_genie
+        return query_genie(question)
+
     try:
         messages = history + [{"role": "user", "content": question}]
         result = asyncio.run(
