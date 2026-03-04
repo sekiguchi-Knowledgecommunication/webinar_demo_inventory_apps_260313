@@ -11,8 +11,9 @@ import random
 import logging
 
 
+import sys
 import dash
-from dash import Dash, html, dcc, callback, Input, Output, State, callback_context, no_update
+from dash import Dash, html, dcc, callback, Input, Output, State, callback_context, no_update, ALL
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -198,16 +199,12 @@ logger = logging.getLogger(__name__)
 try:
     from agent import inventory_agent
     import asyncio
-    import nest_asyncio
-    nest_asyncio.apply()
     from agents import Runner
     AGENT_AVAILABLE = True
     print("\u2705 AI \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u521d\u671f\u5316\u6210\u529f")
-    logger.info("\u2705 AI \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u521d\u671f\u5316\u6210\u529f")
 except Exception as e:
     AGENT_AVAILABLE = False
-    print(f"\u26a0\ufe0f AI \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u521d\u671f\u5316\u5931\u6557\uff08\u30d5\u30a9\u30fc\u30eb\u30d0\u30c3\u30af\u30e2\u30fc\u30c9\uff09: {e}")
-    logger.error(f"\u26a0\ufe0f AI \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u521d\u671f\u5316\u5931\u6557\uff08\u30d5\u30a9\u30fc\u30eb\u30d0\u30c3\u30af\u30e2\u30fc\u30c9\uff09: {e}")
+    print(f"\u26a0\ufe0f AI \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u521d\u671f\u5316\u5931\u6557: {e}")
     import traceback
     traceback.print_exc()
 
@@ -414,17 +411,50 @@ def build_agent_page():
     Output("chat-input", "value"),
     Input("chat-send-btn", "n_clicks"),
     Input("chat-input", "n_submit"),
+    Input({"type": "suggestion-btn", "index": ALL}, "n_clicks"),
     State("chat-input", "value"),
     State("chat-messages", "children"),
     State("chat-history", "data"),
     prevent_initial_call=True,
 )
-def handle_chat(n_clicks, n_submit, user_input, current_messages, history):
-    """AI エージェントチャットのコールバック — Serving Endpoint 経由"""
-    if not user_input or not user_input.strip():
+def handle_chat(n_clicks, n_submit, suggestion_clicks, user_input, current_messages, history):
+    """AI エージェントチャットのコールバック"""
+    ctx = callback_context
+    if not ctx.triggered:
         return no_update, no_update, no_update
+        
+    trigger_id_str = ctx.triggered[0]["prop_id"].split(".")[0]
+    print(f"\U0001f4e9 handle_chat 呼び出し: trigger={trigger_id_str}, input='{user_input}'")
+    sys.stdout.flush()
+    
+    question = ""
+    
+    # サジェスチョンボタンがクリックされた場合
+    if "suggestion-btn" in trigger_id_str:
+        try:
+            btn_id_dict = json.loads(trigger_id_str)
+            idx = btn_id_dict["index"]
+            suggestions = [
+                "在庫総額の概要を教えて",
+                "過剰在庫品目を見せて",
+                "需要予測との乖離を分析",
+                "カテゴリ別の回転率は？",
+            ]
+            question = suggestions[idx]
+            print(f"\ud83d\udca1 サジェスチョン選択: {question}")
+            sys.stdout.flush()
+        except Exception as e:
+            print(f"\u26a0\ufe0f サジェスチョン解析エラー: {e}")
+            sys.stdout.flush()
+            pass
+    # 通常の送信ボタンまたはEnterキーの場合
+    elif user_input and user_input.strip():
+        question = user_input.strip()
 
-    question = user_input.strip()
+    if not question:
+        print("\u274c 空入力のため no_update")
+        sys.stdout.flush()
+        return no_update, no_update, no_update
 
     # ユーザーメッセージを追加
     user_msg = html.Div(className="chat-message user-msg", style={
@@ -439,6 +469,7 @@ def handle_chat(n_clicks, n_submit, user_input, current_messages, history):
 
     # エージェントからの応答を取得
     agent_result = _call_agent(question, history)
+    print(f"\U0001f916 エージェント応答: {agent_result[:100] if agent_result else 'None'}")
 
     # アシスタントメッセージを作成
     assistant_msg = html.Div(className="chat-message assistant-msg", children=[
@@ -467,18 +498,24 @@ def _call_agent(question: str, history: list) -> str:
     エージェント未初期化時はフォールバック（ダミーデータ）。
     """
     if not AGENT_AVAILABLE:
-        logger.info("エージェント未初期化 — フォールバックモードで Genie を直接呼び出し")
+        print("\u26a0\ufe0f AGENT_AVAILABLE=False, Genie フォールバック")
         from tools.genie_tool import query_genie
         return query_genie(question)
 
     try:
+        import nest_asyncio
+        nest_asyncio.apply()
         messages = history + [{"role": "user", "content": question}]
+        print(f"\U0001f680 Runner.run 開始: {question[:50]}")
         result = asyncio.run(
             Runner.run(inventory_agent, input=messages)
         )
-        return result.final_output
+        print(f"\u2705 Runner.run 完了: final_output={result.final_output[:100] if result.final_output else 'None'}")
+        return result.final_output or "エージェントからの応答が空です。もう一度お試しください。"
     except Exception as e:
-        logger.error(f"エージェント実行エラー: {e}")
+        print(f"\u274c Runner.run エラー: {e}")
+        import traceback
+        traceback.print_exc()
         # フォールバック: Genie ツールを直接呼び出し
         logger.info("フォールバックモードで Genie を直接呼び出し")
         from tools.genie_tool import query_genie
