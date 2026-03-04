@@ -432,7 +432,9 @@ def handle_chat(n_clicks, n_submit, suggestion_clicks, user_input, current_messa
     # サジェスチョンボタンがクリックされた場合
     if "suggestion-btn" in trigger_id_str:
         try:
-            btn_id_dict = json.loads(trigger_id_str)
+            # json.loads(trigger_id_str) が Unicode エラーを起こすため、ast.literal_eval を使用
+            import ast
+            btn_id_dict = ast.literal_eval(trigger_id_str)
             idx = btn_id_dict["index"]
             suggestions = [
                 "在庫総額の概要を教えて",
