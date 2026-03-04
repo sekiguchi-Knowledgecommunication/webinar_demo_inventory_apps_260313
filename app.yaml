@@ -20,3 +20,6 @@ env:
   - name: DATABRICKS_SCHEMA
     description: "データが格納されているスキーマ名"
     value: "webinar_demo_0313"
+  - name: SQL_WAREHOUSE_ID
+    description: "テーブル書き込みに使用する SQL Warehouse の ID"
+    value: "863ce5ef78045c29"
