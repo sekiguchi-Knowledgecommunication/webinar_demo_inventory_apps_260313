@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # レポート保存ディレクトリ
-REPORT_DIR = "/tmp/reports"
+REPORT_DIR = "/Workspace/Users/s.sekiguchi7056@gmail.com/10.webinar/00.260313/webinar_demo"
 
 
 def generate_report(
