@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 REPORT_DIR = "/Workspace/Users/s.sekiguchi7056@gmail.com/10.webinar/00.260313/webinar_demo"
 
 
+from agents import function_tool
+
+@function_tool
 def generate_report(
     report_title: str,
     headers: list,

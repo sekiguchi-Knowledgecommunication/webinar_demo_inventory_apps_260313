@@ -14,6 +14,9 @@ import sys
 logger = logging.getLogger(__name__)
 
 
+from agents import function_tool
+
+@function_tool
 def create_order_proposal(
     item_id: str,
     item_name: str,
