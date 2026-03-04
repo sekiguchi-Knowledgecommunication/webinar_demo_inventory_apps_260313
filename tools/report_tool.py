@@ -68,6 +68,7 @@ def generate_report(
 
         # 2. Databricks SDK を使って Workspace に直接アップロード
         from databricks.sdk import WorkspaceClient
+        from databricks.sdk.service.workspace import ImportFormat
         import base64
         
         try:
@@ -79,15 +80,16 @@ def generate_report(
             except Exception as d_err:
                 logger.warning(f"ディレクトリ作成で例外が発生しましたが続行します: {d_err}")
 
-            # アップロード実行: w.files.upload を使用して Workspace File としてアップロード
-            try:
-                # content は BinaryIO が期待されるため io.BytesIO でラップ
-                w.files.upload(filepath, io.BytesIO(csv_bytes), overwrite=True)
-            except Exception as inner_err:
-                # フォールバック: import_ を使う
-                import base64
-                b64_str = base64.b64encode(csv_bytes).decode("utf-8")
-                w.workspace.import_(path=filepath, content=b64_str, format="AUTO", language="PYTHON", overwrite=True)
+            # content は Base64 エンコードされた文字列として渡す
+            b64_str = base64.b64encode(csv_bytes).decode("utf-8")
+            
+            # ImportFormat.AUTO を明示的に指定して、CSV などの汎用 Workspace File を作成
+            w.workspace.import_(
+                path=filepath, 
+                content=b64_str, 
+                format=ImportFormat.AUTO, 
+                overwrite=True
+            )
                 
         except Exception as upload_err:
             logger.error(f"Workspace へのアップロードに失敗しました: {upload_err}")
