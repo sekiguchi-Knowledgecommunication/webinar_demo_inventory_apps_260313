@@ -14,3 +14,9 @@ env:
   - name: AGENT_MODEL
     description: "AI エージェントが使用する LLM モデル名"
     value: "databricks-meta-llama-3-3-70b-instruct"
+  - name: DATABRICKS_CATALOG
+    description: "データが格納されている Unity Catalog のカタログ名"
+    value: "apps_demo_catalog"
+  - name: DATABRICKS_SCHEMA
+    description: "データが格納されているスキーマ名"
+    value: "webinar_demo_0313"

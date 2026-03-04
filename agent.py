@@ -33,7 +33,12 @@ PROMPT_DIR = pathlib.Path(__file__).parent / "prompts"
 PROMPT_PATH = PROMPT_DIR / "system_prompt.md"
 
 try:
-    SYSTEM_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
+    raw_prompt = PROMPT_PATH.read_text(encoding="utf-8")
+    # 環境変数から取得（未設定時はデフォルト値を使用）
+    CATALOG = os.environ.get("DATABRICKS_CATALOG", "apps_demo_catalog")
+    SCHEMA = os.environ.get("DATABRICKS_SCHEMA", "webinar_demo_0313")
+    # プロンプト内のプレースホルダを置換
+    SYSTEM_PROMPT = raw_prompt.replace("{catalog}", CATALOG).replace("{schema}", SCHEMA)
 except FileNotFoundError:
     SYSTEM_PROMPT = "あなたは製造業の在庫管理に特化した分析エージェントです。日本語で応答してください。"
 
@@ -44,6 +49,8 @@ except FileNotFoundError:
 
 # Genie ツール読み込み
 from tools.genie_tool import query_genie
+from tools.report_tool import generate_report
+from tools.order_proposal_tool import create_order_proposal
 
 
 @function_tool
@@ -93,6 +100,8 @@ inventory_agent = Agent(
     tools=[
         query_inventory_data,
         report_step,
+        generate_report,
+        create_order_proposal,
     ],
     model=MODEL_NAME,
     model_settings=ModelSettings(

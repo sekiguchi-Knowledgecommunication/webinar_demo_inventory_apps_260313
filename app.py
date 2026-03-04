@@ -9,11 +9,11 @@ import os
 import json
 import random
 import logging
-
-
+import re
 import sys
 import dash
-from dash import Dash, html, dcc, callback, Input, Output, State, callback_context, no_update, ALL
+from dash import Dash, html, dcc, callback, Input, Output, State, ALL, callback_context, no_update
+from flask import send_file, request, ALL
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -312,9 +312,9 @@ def build_agent_page():
                                    "background": "#f0f9ff", "color": "#0369a1",
                                    "fontSize": "0.8rem", "cursor": "pointer"})
                 for i, q in enumerate([
-                    "在庫総額の概要を教えて",
-                    "過剰在庫品目を見せて",
-                    "需要予測との乖離を分析",
+                    "在庫の全体状況を分析して",
+                    "過剰在庫のレポートを作成して",
+                    "不足品目の発注提案を作成して",
                     "カテゴリ別の回転率は？",
                 ])
             ]),
@@ -392,9 +392,9 @@ def handle_user_input(n_clicks, n_submit, suggestion_clicks, user_input):
             btn_id_dict = ast.literal_eval(trigger_id_str)
             idx = btn_id_dict["index"]
             suggestions = [
-                "在庫総額の概要を教えて",
-                "過剰在庫品目を見せて",
-                "需要予測との乖離を分析",
+                "在庫の全体状況を分析して",
+                "過剰在庫のレポートを作成して",
+                "不足品目の発注提案を作成して",
                 "カテゴリ別の回転率は？",
             ]
             question = suggestions[idx]
@@ -466,16 +466,66 @@ def handle_agent_response(trigger_data, current_messages, history):
         }),
     ])
 
+    # レポートや発注提案のプレフィックスを解釈して特別なUIを描画
+    children = []
+    
+    report_match = re.search(r'\[REPORT:(.*?)\]', agent_result)
+    order_match = re.search(r'\[ORDER_PROPOSAL:(.*?)\]', agent_result)
+    
+    if report_match:
+        filepath = report_match.group(1)
+        filename = os.path.basename(filepath)
+        clean_text = agent_result.replace(report_match.group(0), "").strip()
+        
+        children.append(html.Div(children=[
+            html.Pre(clean_text, style={
+                "whiteSpace": "pre-wrap", "wordWrap": "break-word",
+                "fontFamily": "var(--font-body)", "fontSize": "0.9rem", "lineHeight": "1.7",
+                "margin": "0 0 16px", "color": "var(--color-text-primary)",
+            }),
+            html.A(
+                html.Div([
+                    html.Span("📊 ", style={"fontSize": "1.2rem"}),
+                    html.Span(f"{filename} をダウンロード", style={"fontWeight": "600"})
+                ]),
+                href=f"/download?file={filepath}",
+                target="_blank",
+                style={
+                    "display": "inline-block", "padding": "12px 20px",
+                    "background": "#f0fdf4", "border": "1px solid #bbf7d0",
+                    "borderRadius": "8px", "color": "#166534", "textDecoration": "none",
+                }
+            )
+        ]))
+    elif order_match:
+        proposal_id = order_match.group(1)
+        clean_text = agent_result.replace(order_match.group(0), "").strip()
+        
+        children.append(html.Div(children=[
+            html.Pre(clean_text, style={
+                "whiteSpace": "pre-wrap", "wordWrap": "break-word",
+                "fontFamily": "var(--font-body)", "fontSize": "0.9rem", "lineHeight": "1.7",
+                "margin": "0 0 16px", "color": "var(--color-text-primary)",
+            }),
+            html.Div([
+                html.Span("📝 発注提案登録完了", style={"fontWeight": "700", "color": "#075985"}),
+                html.Br(),
+                html.Span(f"提案ID: {proposal_id} - Delta テーブルに保存されました", style={"fontSize": "0.85rem", "color": "#0369a1"})
+            ], style={
+                "padding": "12px 16px", "background": "#f0f9ff",
+                "borderLeft": "4px solid #0ea5e9", "borderRadius": "4px",
+            })
+        ]))
+    else:
+        children.append(html.Pre(agent_result, style={
+            "whiteSpace": "pre-wrap", "wordWrap": "break-word",
+            "fontFamily": "var(--font-body)", "fontSize": "0.9rem", "lineHeight": "1.7",
+            "margin": "0", "color": "var(--color-text-primary)",
+        }))
+
     # アシスタントメッセージ
     assistant_msg = html.Div(className="chat-message assistant-msg", children=[
-        html.Div(children=[
-            html.Pre(agent_result, style={
-                "whiteSpace": "pre-wrap", "wordWrap": "break-word",
-                "fontFamily": "var(--font-body)",
-                "fontSize": "0.9rem", "lineHeight": "1.7",
-                "margin": "0", "color": "var(--color-text-primary)",
-            }),
-        ]),
+        html.Div(children=children),
     ])
 
     # 履歴更新
@@ -519,6 +569,14 @@ def _call_agent(question: str, history: list) -> str:
 
 
 server = app.server
+
+@server.route("/download")
+def download_file():
+    filepath = request.args.get("file")
+    if filepath and os.path.exists(filepath):
+        from flask import send_file
+        return send_file(filepath, as_attachment=True)
+    return "File not found", 404
 
 if __name__ == "__main__":
     port = int(os.environ.get("DATABRICKS_APP_PORT", 8050))
