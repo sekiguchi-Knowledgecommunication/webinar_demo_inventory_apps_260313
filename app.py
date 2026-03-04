@@ -10,7 +10,6 @@ import json
 import random
 import logging
 
-import httpx
 
 import dash
 from dash import Dash, html, dcc, callback, Input, Output, State, callback_context, no_update
@@ -196,8 +195,12 @@ DASHBOARD_ID = os.environ.get(
 # 公開ダッシュボードの埋め込み URL
 EMBED_URL = f"{WORKSPACE_URL}/embed/dashboardsv3/{DASHBOARD_ID}?o=0"
 
-# AI エージェント Serving Endpoint 設定
-SERVING_ENDPOINT = os.environ.get("SERVING_ENDPOINT", "")
+# AI エージェント設定
+from agent import inventory_agent
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
+from agents import Runner
 logger = logging.getLogger(__name__)
 
 def build_dashboard_page():
@@ -451,68 +454,22 @@ def handle_chat(n_clicks, n_submit, user_input, current_messages, history):
 
 def _call_agent(question: str, history: list) -> str:
     """
-    AI エージェントを呼び出す。
-    Serving Endpoint が設定されている場合は REST API 経由、
-    未設定の場合は Genie ツール直接呼び出し（フォールバック）。
+    AI エージェントを直接呼び出す（公式パターン: AsyncDatabricksOpenAI）。
+    Serving Endpoint を経由せず、アプリ内で Runner.run() を実行。
+    GENIE_SPACE_ID 未設定時はフォールバック（ダミーデータ）。
     """
-    if SERVING_ENDPOINT:
-        return _call_serving_endpoint(question, history)
-    else:
+    try:
+        messages = history + [{"role": "user", "content": question}]
+        result = asyncio.run(
+            Runner.run(inventory_agent, input=messages)
+        )
+        return result.final_output
+    except Exception as e:
+        logger.error(f"エージェント実行エラー: {e}")
         # フォールバック: Genie ツールを直接呼び出し
-        logger.info("SERVING_ENDPOINT 未設定 — フォールバックモードで Genie を直接呼び出し")
+        logger.info("フォールバックモードで Genie を直接呼び出し")
         from tools.genie_tool import query_genie
         return query_genie(question)
-
-
-def _call_serving_endpoint(question: str, history: list) -> str:
-    """
-    Serving Endpoint の REST API を呼び出してエージェント応答を取得。
-    Databricks Apps 内からは DATABRICKS_TOKEN が自動設定される。
-    """
-    # 会話履歴 + 新しい質問を messages 形式で構築
-    messages = history + [{"role": "user", "content": question}]
-
-    # Endpoint URL を構築
-    endpoint_url = f"{WORKSPACE_URL}/serving-endpoints/{SERVING_ENDPOINT}/invocations"
-
-    # Databricks Apps 内ではトークンが自動設定される
-    token = os.environ.get("DATABRICKS_TOKEN", "")
-
-    try:
-        response = httpx.post(
-            endpoint_url,
-            json={
-                "messages": messages,
-            },
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-            timeout=120.0,  # エージェントは複数ステップ実行するためタイムアウトを長めに
-        )
-        response.raise_for_status()
-
-        result = response.json()
-
-        # レスポンス形式に応じてテキストを抽出
-        if "choices" in result:
-            # Chat Completions 形式
-            return result["choices"][0]["message"]["content"]
-        elif "messages" in result:
-            # MLflow ChatAgent 形式
-            return result["messages"][-1]["content"]
-        elif "predictions" in result:
-            # 旧形式
-            return str(result["predictions"])
-        else:
-            return json.dumps(result, ensure_ascii=False, indent=2)
-
-    except httpx.HTTPStatusError as e:
-        logger.error(f"Serving Endpoint HTTP エラー: {e.response.status_code} — {e.response.text[:200]}")
-        return f"エージェントへの接続でエラーが発生しました（HTTP {e.response.status_code}）。\nもう一度お試しください。"
-    except Exception as e:
-        logger.error(f"Serving Endpoint 呼び出しエラー: {e}")
-        return f"エージェントへの接続でエラーが発生しました: {str(e)}\nもう一度お試しください。"
 
 
 server = app.server

@@ -9,5 +9,7 @@ env:
     description: "Databricks Workspace の URL（iframe 埋め込み用）"
   - name: DASHBOARD_ID
     description: "AI/BI ダッシュボードの ID"
-  - name: SERVING_ENDPOINT
-    description: "AI エージェントの Model Serving Endpoint 名（例: inventory-agent-endpoint）"
+  - name: GENIE_SPACE_ID
+    description: "Genie Space ID（在庫データへのアクセス用）"
+  - name: AGENT_MODEL
+    description: "AI エージェントが使用する LLM モデル名（例: databricks-meta-llama-3-3-70b-instruct）"

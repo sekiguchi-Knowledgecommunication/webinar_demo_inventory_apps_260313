@@ -1,5 +1,8 @@
 # Databricks Apps プリインストール: dash, plotly
 # 以下は追加依存のみ
+openai-agents>=0.0.5
+databricks-openai
+databricks-sdk>=0.40.0
+nest_asyncio
 pandas>=2.0.0
 numpy>=1.24.0
-httpx>=0.27.0
