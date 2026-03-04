@@ -232,43 +232,6 @@ def build_dashboard_page():
 
 
 # ====================
-# Scene 5: まとめ
-# ====================
-def build_summary_page():
-    """Scene 5: まとめ + CTA ページ"""
-    demo_items = [
-        ("データ統合", "Medallion Architecture で Single Source of Truth を確立"),
-        ("統合可視化", "部門横断ダッシュボードで在庫を一画面で俯瞰"),
-        ("AI エージェント分析", "Genie API を活用した自律的データ分析"),
-        ("アクション提案", "要因分析を自動化し、具体的な改善策を生成"),
-    ]
-
-    return html.Div([
-        html.H2("まとめ", className="animate-reveal",
-                style={"fontWeight": "800", "color": "var(--color-text-primary)", "margin": "0 0 16px 0"}),
-        html.Div(className="chart-panel animate-reveal", children=[
-            html.Div(className="chart-title", children=["本日のデモ"]),
-            *[html.Div(style={"display": "flex", "gap": "16px", "padding": "12px 16px", "borderRadius": "8px",
-                               "background": "#f0f9ff", "border": "1px solid #e0f2fe",
-                               "marginBottom": "8px", "alignItems": "center"}, children=[
-                html.Div(style={"width": "8px", "height": "8px", "borderRadius": "50%",
-                                "background": "var(--color-accent-primary)", "flexShrink": "0"}),
-                html.Div([html.Div(t, style={"fontWeight": "700", "color": "var(--color-text-primary)"}),
-                          html.Div(d, style={"fontSize": "0.85rem", "color": "var(--color-text-secondary)"})]),
-            ]) for t, d in demo_items],
-        ]),
-        html.Div(style={"height": "16px"}),
-        html.Div(className="cta-section animate-reveal", children=[
-            html.Div("ワークショップに参加しませんか？",
-                     style={"fontSize": "1.3rem", "fontWeight": "800"}),
-            html.Div("貴社のデータで Databricks Lakehouse を半日で体験できます",
-                     style={"color": "rgba(255,255,255,0.8)", "marginTop": "8px", "marginBottom": "24px"}),
-            html.A("ワークショップに申し込む", href="#", className="cta-button"),
-        ]),
-    ])
-
-
-# ====================
 # メインレイアウト（タブ切替）
 # ====================
 app.layout = html.Div([
@@ -301,10 +264,6 @@ app.layout = html.Div([
                     style={"color": "#6b7280", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
                     selected_style={"color": "var(--color-accent-primary)", "backgroundColor": "#f0f9ff",
                                     "border": "none", "borderBottom": "2px solid var(--color-accent-primary)", "padding": "10px 20px"}),
-            dcc.Tab(label="まとめ", value="summary",
-                    style={"color": "#6b7280", "backgroundColor": "transparent", "border": "none", "padding": "10px 20px"},
-                    selected_style={"color": "var(--color-accent-primary)", "backgroundColor": "#f0f9ff",
-                                    "border": "none", "borderBottom": "2px solid var(--color-accent-primary)", "padding": "10px 20px"}),
         ]),
         html.Div(id="page-content", style={"paddingTop": "24px"}),
     ]),
@@ -322,8 +281,6 @@ def render_page(tab):
         return build_dashboard_page()
     elif tab == "agent":
         return build_agent_page()
-    elif tab == "summary":
-        return build_summary_page()
     return html.Div("ページが見つかりません")
 
 
