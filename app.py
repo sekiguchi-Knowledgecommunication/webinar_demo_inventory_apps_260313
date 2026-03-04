@@ -375,10 +375,13 @@ def build_agent_page():
                  style={"padding": "0", "display": "flex", "flexDirection": "column", "height": "70vh",
                         "borderLeft": "3px solid var(--color-accent-primary)"}, children=[
             # メッセージ表示エリア
-            html.Div(id="chat-messages", style={
+            html.Div(id="chat-scroll-area", style={
                 "flex": "1", "overflowY": "auto", "padding": "20px",
                 "display": "flex", "flexDirection": "column", "gap": "16px",
-            }, children=[welcome_card]),
+            }, children=[
+                html.Div(id="chat-history-ui", style={"display": "flex", "flexDirection": "column", "gap": "16px"}, children=[welcome_card]),
+                html.Div(id="chat-temporary-ui", style={"display": "flex", "flexDirection": "column", "gap": "16px"}, children=[]),
+            ]),
             # 入力エリア
             html.Div(style={
                 "padding": "16px 20px",
@@ -400,39 +403,34 @@ def build_agent_page():
                                    "fontWeight": "600", "cursor": "pointer", "fontSize": "0.95rem"}),
             ]),
         ]),
-        # チャット履歴保存用
+        # チャット履歴保存用と非同期トリガー用
         dcc.Store(id="chat-history", data=[]),
+        dcc.Store(id="trigger-agent", data=None),
     ])
 
 
 @callback(
-    Output("chat-messages", "children"),
-    Output("chat-history", "data"),
+    Output("chat-temporary-ui", "children"),
+    Output("trigger-agent", "data"),
     Output("chat-input", "value"),
     Input("chat-send-btn", "n_clicks"),
     Input("chat-input", "n_submit"),
     Input({"type": "suggestion-btn", "index": ALL}, "n_clicks"),
     State("chat-input", "value"),
-    State("chat-messages", "children"),
-    State("chat-history", "data"),
     prevent_initial_call=True,
 )
-def handle_chat(n_clicks, n_submit, suggestion_clicks, user_input, current_messages, history):
-    """AI エージェントチャットのコールバック"""
+def handle_user_input(n_clicks, n_submit, suggestion_clicks, user_input):
+    """ユーザー入力を受け取り、即座にUIに反映してLLMをトリガー"""
     ctx = callback_context
     if not ctx.triggered:
         return no_update, no_update, no_update
         
     trigger_id_str = ctx.triggered[0]["prop_id"].split(".")[0]
-    print(f"\U0001f4e9 handle_chat 呼び出し: trigger={trigger_id_str}, input='{user_input}'")
-    sys.stdout.flush()
-    
     question = ""
     
     # サジェスチョンボタンがクリックされた場合
     if "suggestion-btn" in trigger_id_str:
         try:
-            # json.loads(trigger_id_str) が Unicode エラーを起こすため、ast.literal_eval を使用
             import ast
             btn_id_dict = ast.literal_eval(trigger_id_str)
             idx = btn_id_dict["index"]
@@ -443,22 +441,16 @@ def handle_chat(n_clicks, n_submit, suggestion_clicks, user_input, current_messa
                 "カテゴリ別の回転率は？",
             ]
             question = suggestions[idx]
-            print(f"\ud83d\udca1 サジェスチョン選択: {question}")
-            sys.stdout.flush()
         except Exception as e:
-            print(f"\u26a0\ufe0f サジェスチョン解析エラー: {e}")
-            sys.stdout.flush()
             pass
     # 通常の送信ボタンまたはEnterキーの場合
     elif user_input and user_input.strip():
         question = user_input.strip()
 
     if not question:
-        print("\u274c 空入力のため no_update")
-        sys.stdout.flush()
         return no_update, no_update, no_update
 
-    # ユーザーメッセージを追加
+    # ユーザーメッセージ
     user_msg = html.Div(className="chat-message user-msg", style={
         "alignSelf": "flex-end", "maxWidth": "75%",
     }, children=[
@@ -469,11 +461,55 @@ def handle_chat(n_clicks, n_submit, suggestion_clicks, user_input, current_messa
         }),
     ])
 
+    # タイピングインジケーターを作成
+    typing_indicator = html.Div(className="chat-message assistant-msg", style={
+        "alignSelf": "flex-start", "maxWidth": "75%",
+    }, children=[
+        html.Div(className="typing-indicator", style={
+            "background": "white", "border": "1px solid #e5e7eb",
+            "padding": "12px 16px", "borderRadius": "16px 16px 16px 4px",
+        }, children=[
+            html.Span(""), html.Span(""), html.Span("")
+        ])
+    ])
+
+    # 一時UIにメッセージを表示し、エージェントをトリガー
+    return [user_msg, typing_indicator], {"question": question}, ""
+
+
+@callback(
+    Output("chat-history-ui", "children"),
+    Output("chat-history", "data"),
+    Output("chat-temporary-ui", "children", allow_duplicate=True),
+    Input("trigger-agent", "data"),
+    State("chat-history-ui", "children"),
+    State("chat-history", "data"),
+    prevent_initial_call=True,
+)
+def handle_agent_response(trigger_data, current_messages, history):
+    """AI エージェントと通信して応答を得る"""
+    if not trigger_data or "question" not in trigger_data:
+        return no_update, no_update, no_update
+        
+    question = trigger_data["question"]
+
     # エージェントからの応答を取得
     agent_result = _call_agent(question, history)
     print(f"\U0001f916 エージェント応答: {agent_result[:100] if agent_result else 'None'}")
+    sys.stdout.flush()
 
-    # アシスタントメッセージを作成
+    # ユーザーメッセージ（履歴用に再作成）
+    user_msg = html.Div(className="chat-message user-msg", style={
+        "alignSelf": "flex-end", "maxWidth": "75%",
+    }, children=[
+        html.Div(question, style={
+            "background": "var(--color-accent-primary)",
+            "padding": "12px 16px", "borderRadius": "16px 16px 4px 16px",
+            "color": "white", "lineHeight": "1.6",
+        }),
+    ])
+
+    # アシスタントメッセージ
     assistant_msg = html.Div(className="chat-message assistant-msg", children=[
         html.Div(children=[
             html.Pre(agent_result, style={
@@ -490,7 +526,8 @@ def handle_chat(n_clicks, n_submit, suggestion_clicks, user_input, current_messa
                              {"role": "assistant", "content": agent_result}]
     new_messages = current_messages + [user_msg, assistant_msg]
 
-    return new_messages, new_history, ""
+    # 履歴UIに追加し、一時UIはクリアする
+    return new_messages, new_history, []
 
 
 def _call_agent(question: str, history: list) -> str:
