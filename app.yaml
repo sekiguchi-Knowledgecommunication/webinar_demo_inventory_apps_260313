@@ -2,3 +2,12 @@
 command:
   - python
   - app.py
+
+# 環境変数
+env:
+  - name: DATABRICKS_WORKSPACE_URL
+    description: "Databricks Workspace の URL（iframe 埋め込み用）"
+  - name: DASHBOARD_ID
+    description: "AI/BI ダッシュボードの ID"
+  - name: SERVING_ENDPOINT
+    description: "AI エージェントの Model Serving Endpoint 名（例: inventory-agent-endpoint）"
