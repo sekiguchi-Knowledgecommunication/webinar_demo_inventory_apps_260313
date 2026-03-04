@@ -7,9 +7,13 @@ command:
 env:
   - name: DATABRICKS_WORKSPACE_URL
     description: "Databricks Workspace の URL（iframe 埋め込み用）"
+    value: ""
   - name: DASHBOARD_ID
     description: "AI/BI ダッシュボードの ID"
+    value: ""
   - name: GENIE_SPACE_ID
     description: "Genie Space ID（在庫データへのアクセス用）"
+    value: ""
   - name: AGENT_MODEL
-    description: "AI エージェントが使用する LLM モデル名（例: databricks-meta-llama-3-3-70b-instruct）"
+    description: "AI エージェントが使用する LLM モデル名"
+    value: "databricks-meta-llama-3-3-70b-instruct"
