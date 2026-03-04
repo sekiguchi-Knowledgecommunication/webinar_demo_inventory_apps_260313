@@ -202,10 +202,14 @@ try:
     nest_asyncio.apply()
     from agents import Runner
     AGENT_AVAILABLE = True
-    logger.info("✅ AI エージェント初期化成功")
+    print("\u2705 AI \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u521d\u671f\u5316\u6210\u529f")
+    logger.info("\u2705 AI \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u521d\u671f\u5316\u6210\u529f")
 except Exception as e:
     AGENT_AVAILABLE = False
-    logger.error(f"⚠️ AI エージェント初期化失敗（フォールバックモード）: {e}")
+    print(f"\u26a0\ufe0f AI \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u521d\u671f\u5316\u5931\u6557\uff08\u30d5\u30a9\u30fc\u30eb\u30d0\u30c3\u30af\u30e2\u30fc\u30c9\uff09: {e}")
+    logger.error(f"\u26a0\ufe0f AI \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u521d\u671f\u5316\u5931\u6557\uff08\u30d5\u30a9\u30fc\u30eb\u30d0\u30c3\u30af\u30e2\u30fc\u30c9\uff09: {e}")
+    import traceback
+    traceback.print_exc()
 
 def build_dashboard_page():
     """Scene 2: ダッシュボードページ（AI/BI ダッシュボード iframe）"""
