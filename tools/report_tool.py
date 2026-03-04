@@ -41,30 +41,55 @@ def generate_report(
         レポートファイルのパスと概要を含むメッセージ
     """
     try:
-        # ディレクトリ作成
-        os.makedirs(REPORT_DIR, exist_ok=True)
-
-        # ファイル名にタイムスタンプを付与
+        # ファイル名の生成
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_title = report_title.replace(" ", "_").replace("/", "_")[:30]
-        filename = f"{safe_title}_{timestamp}.csv"
+        safe_report_title = report_title.replace(" ", "_").replace("/", "_").replace("\\", "_")[:30]
+        filename = f"{safe_report_title}_{timestamp}.csv"
         filepath = os.path.join(REPORT_DIR, filename)
 
-        # CSV 書き込み
-        with open(filepath, "w", newline="", encoding="utf-8-sig") as f:
-            writer = csv.writer(f)
+        # 1. ローカルファイルには書き込まず、メモリ上に CSV を作成する
+        import io
+        output = io.StringIO()
+        writer = csv.writer(output)
 
-            # サマリをコメント行として追加
-            writer.writerow([f"# レポート: {report_title}"])
-            writer.writerow([f"# 作成日時: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"])
-            writer.writerow([f"# 作成者: AI エージェント"])
-            writer.writerow([])
+        # サマリをコメント行として追加
+        writer.writerow([f"# レポート: {report_title}"])
+        writer.writerow([f"# 作成日時: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"])
+        writer.writerow([f"# 作成者: AI エージェント"])
+        writer.writerow([])
 
-            # ヘッダーとデータ
-            if headers:
-                writer.writerow(headers)
-            for row in rows:
-                writer.writerow(row)
+        # ヘッダーとデータ
+        if headers:
+            writer.writerow(headers)
+        for row in rows:
+            writer.writerow(row)
+            
+        csv_bytes = output.getvalue().encode("utf-8-sig")
+
+        # 2. Databricks SDK を使って Workspace に直接アップロード
+        from databricks.sdk import WorkspaceClient
+        import base64
+        
+        try:
+            w = WorkspaceClient()
+            
+            # ディレクトリを作成（存在していてもエラーにはならない・再帰作成可能）
+            try:
+                w.workspace.mkdirs(REPORT_DIR)
+            except Exception as d_err:
+                logger.warning(f"ディレクトリ作成で例外が発生しましたが続行します: {d_err}")
+
+            # アップロード実行: SDK は通常 bytes を期待する
+            try:
+                w.workspace.upload(path=filepath, content=csv_bytes, overwrite=True)
+            except TypeError:
+                # 万一古い SDK バージョンなどで base64 文字列を要求された場合のフォールバック
+                b64_str = base64.b64encode(csv_bytes).decode("utf-8")
+                w.workspace.upload(path=filepath, content=b64_str, overwrite=True)
+                
+        except Exception as upload_err:
+            logger.error(f"Workspace へのアップロードに失敗しました: {upload_err}")
+            return f"⚠️ レポートの保存に失敗しました: {upload_err}"
 
         row_count = len(rows)
         logger.info(f"📊 レポート生成完了: {filepath} ({row_count} 行)")
