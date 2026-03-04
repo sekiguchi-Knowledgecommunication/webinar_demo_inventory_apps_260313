@@ -79,13 +79,15 @@ def generate_report(
             except Exception as d_err:
                 logger.warning(f"ディレクトリ作成で例外が発生しましたが続行します: {d_err}")
 
-            # アップロード実行: SDK は通常 bytes を期待する
+            # アップロード実行: w.files.upload を使用して Workspace File としてアップロード
             try:
-                w.workspace.upload(path=filepath, content=csv_bytes, overwrite=True)
-            except TypeError:
-                # 万一古い SDK バージョンなどで base64 文字列を要求された場合のフォールバック
+                # content は BinaryIO が期待されるため io.BytesIO でラップ
+                w.files.upload(filepath, io.BytesIO(csv_bytes), overwrite=True)
+            except Exception as inner_err:
+                # フォールバック: import_ を使う
+                import base64
                 b64_str = base64.b64encode(csv_bytes).decode("utf-8")
-                w.workspace.upload(path=filepath, content=b64_str, overwrite=True)
+                w.workspace.import_(path=filepath, content=b64_str, format="AUTO", language="PYTHON", overwrite=True)
                 
         except Exception as upload_err:
             logger.error(f"Workspace へのアップロードに失敗しました: {upload_err}")
