@@ -564,29 +564,46 @@ def _call_agent(question: str, history: list) -> str:
         print(f"\u2705 Runner.run 完了: final_output={final_output[:100]}")
 
         # ─────────────────────────────────────────────────────
-        # LLM がタグを省略した場合のフォールバック:
-        # new_messages のツール出力から [REPORT:...] / [ORDER_PROPOSAL:...] を検索して付加
+        # LLM がタグを省略した場合のフォールバック（多段階）:
+        # 1. new_messages のツール出力テキストからタグを検索
+        # 2. それでも見つからない場合は report_tool のサイドチャンネルを参照
         # ─────────────────────────────────────────────────────
         if "[REPORT:" not in final_output and "[ORDER_PROPOSAL:" not in final_output:
+            tag_found = False
+            # ① new_messages から検索
             try:
                 for msg in result.new_messages:
                     msg_str = str(msg)
-                    # REPORT タグを検索
                     tag_match = re.search(r'\[REPORT:([^\]]+)\]', msg_str)
                     if tag_match:
                         tag = f"[REPORT:{tag_match.group(1)}]"
-                        print(f"\U0001f527 ツール出力からタグを補完: {tag}")
+                        print(f"\U0001f527 new_messages からタグ補完: {tag}")
                         final_output = f"{tag}\n\n{final_output}"
+                        tag_found = True
                         break
-                    # ORDER_PROPOSAL タグを検索
                     order_match = re.search(r'\[ORDER_PROPOSAL:([^\]]+)\]', msg_str)
                     if order_match:
                         tag = f"[ORDER_PROPOSAL:{order_match.group(1)}]"
-                        print(f"\U0001f527 ツール出力からタグを補完: {tag}")
+                        print(f"\U0001f527 new_messages からタグ補完: {tag}")
                         final_output = f"{tag}\n\n{final_output}"
+                        tag_found = True
                         break
             except Exception as tag_err:
-                print(f"⚠️ タグ補完中の例外（無視）: {tag_err}")
+                print(f"⚠️ new_messages スキャン中の例外（無視）: {tag_err}")
+
+            # ② サイドチャンネル（report_tool._LAST_GENERATED_REPORT）を参照
+            if not tag_found:
+                try:
+                    from tools.report_tool import _LAST_GENERATED_REPORT
+                    if _LAST_GENERATED_REPORT.get("path"):
+                        path = _LAST_GENERATED_REPORT["path"]
+                        tag = f"[REPORT:{path}]"
+                        print(f"\U0001f527 サイドチャンネルからタグ補完: {tag}")
+                        final_output = f"{tag}\n\n{final_output}"
+                        # 読み取り後はリセット
+                        _LAST_GENERATED_REPORT.clear()
+                except Exception as sc_err:
+                    print(f"⚠️ サイドチャンネル参照中の例外（無視）: {sc_err}")
 
         return final_output
 

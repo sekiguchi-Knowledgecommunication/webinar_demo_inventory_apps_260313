@@ -15,6 +15,13 @@ logger = logging.getLogger(__name__)
 # レポート保存ディレクトリ
 REPORT_DIR = "/Workspace/Users/s.sekiguchi7056@gmail.com/10.webinar/00.260313/webinar_demo"
 
+# ─────────────────────────────────────────────────────────────
+# サイドチャンネル: LLM が [REPORT:...] タグを返さなかった場合に
+# app.py 側でパスを取得するためのモジュールレベル変数
+# generate_report が成功したタイミングで書き込まれる
+# ─────────────────────────────────────────────────────────────
+_LAST_GENERATED_REPORT: dict = {}
+
 # デザイン定数（Databricks ブランドカラー）
 COLOR_HEADER_BG    = "1B3A6B"  # ダークネイビー（ヘッダー背景）
 COLOR_HEADER_FG    = "FFFFFF"  # 白文字
@@ -88,6 +95,11 @@ def generate_report(
 
         row_count = len(rows)
         logger.info(f"📊 Excel レポート生成完了: {filepath} ({row_count} 行)")
+
+        # サイドチャンネルにパスを記録
+        # LLM が [REPORT:...] タグを最終出力に含めなかった場合に app.py 側で使用する
+        _LAST_GENERATED_REPORT["path"] = filepath
+        _LAST_GENERATED_REPORT["filename"] = filename
 
         return (
             f"[REPORT:{filepath}]\n\n"
