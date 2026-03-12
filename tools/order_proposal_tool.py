@@ -25,6 +25,7 @@ def create_order_proposal(
     recommended_order_qty: int,
     reason: str,
     priority: str,
+    quantitative_basis: str = "",
 ) -> str:
     """
     在庫分析に基づいて発注提案レコードを Delta テーブルに作成する。
@@ -40,6 +41,7 @@ def create_order_proposal(
         recommended_order_qty: 推奨発注数量
         reason: 発注理由（例: "在庫回転率が0.31で基準値1.0を大幅に下回る"）
         priority: 優先度（HIGH / MEDIUM / LOW）
+        quantitative_basis: 判断の定量的根拠（例: "在庫回転率 0.31（基準値比 -69%）、滞留日数 72日（閾値超 +12日）"）
 
     Returns:
         書き込み結果のメッセージ
@@ -59,11 +61,14 @@ def create_order_proposal(
             recommended_order_qty=recommended_order_qty,
             reason=reason,
             priority=priority,
+            quantitative_basis=quantitative_basis,
         )
 
         if result:
             print(f"📝 発注提案作成: {item_id} ({item_name}) - {recommended_order_qty}個")
             sys.stdout.flush()
+            # 定量根拠がある場合のみ行を追加
+            basis_line = f"- **判断根拠（定量）**: {quantitative_basis}\n" if quantitative_basis else ""
             return (
                 f"[ORDER_PROPOSAL:{proposal_id}]\n\n"
                 f"📝 **発注提案を登録しました**\n\n"
@@ -74,26 +79,27 @@ def create_order_proposal(
                 f"- **推奨発注数**: {recommended_order_qty:,} 個\n"
                 f"- **優先度**: {priority}\n"
                 f"- **理由**: {reason}\n"
+                f"{basis_line}"
                 f"- **ステータス**: PENDING（承認待ち）"
             )
         else:
             # フォールバック: テーブル書き込み失敗時もレスポンスは返す
             return _fallback_proposal(
                 proposal_id, item_id, item_name, category,
-                current_stock, recommended_order_qty, reason, priority
+                current_stock, recommended_order_qty, reason, priority, quantitative_basis
             )
 
     except Exception as e:
         logger.error(f"発注提案作成エラー: {e}")
         return _fallback_proposal(
             str(uuid.uuid4())[:8], item_id, item_name, category,
-            current_stock, recommended_order_qty, reason, priority
+            current_stock, recommended_order_qty, reason, priority, quantitative_basis
         )
 
 
 def _insert_to_delta(
     proposal_id, created_at, item_id, item_name, category,
-    current_stock, recommended_order_qty, reason, priority
+    current_stock, recommended_order_qty, reason, priority, quantitative_basis=""
 ) -> bool:
     """SQL Warehouse 経由で Delta テーブルに INSERT する"""
     try:
@@ -106,14 +112,18 @@ def _insert_to_delta(
         schema = os.environ.get("DATABRICKS_SCHEMA", "webinar_demo_0313")
         table_name = f"{catalog}.{schema}.order_proposals"
 
-        # INSERT SQL を構築
+        # INSERT SQL を構築（quantitative_basis は reason に付記して格納）
+        # シングルクォートエスケープ
+        reason_escaped = reason.replace("'", "''")
+        basis_escaped = quantitative_basis.replace("'", "''")
+        full_reason = f"{reason_escaped} [{basis_escaped}]" if basis_escaped else reason_escaped
         sql = f"""
         INSERT INTO {table_name}
         (proposal_id, created_at, item_id, item_name, category,
          current_stock, recommended_order_qty, reason, priority, status, created_by)
         VALUES
         ('{proposal_id}', '{created_at}', '{item_id}', '{item_name}', '{category}',
-         {current_stock}, {recommended_order_qty}, '{reason}', '{priority}', 'PENDING', 'ai-agent')
+         {current_stock}, {recommended_order_qty}, '{full_reason}', '{priority}', 'PENDING', 'ai-agent')
         """
 
         # SQL Warehouse で実行
@@ -139,9 +149,10 @@ def _insert_to_delta(
 
 def _fallback_proposal(
     proposal_id, item_id, item_name, category,
-    current_stock, recommended_order_qty, reason, priority
+    current_stock, recommended_order_qty, reason, priority, quantitative_basis=""
 ) -> str:
     """テーブル書き込み不可時のフォールバック応答"""
+    basis_line = f"- **判断根拠（定量）**: {quantitative_basis}\n" if quantitative_basis else ""
     return (
         f"📝 **発注提案を作成しました**（デモモード）\n\n"
         f"- **提案ID**: {proposal_id}\n"
@@ -151,6 +162,7 @@ def _fallback_proposal(
         f"- **推奨発注数**: {recommended_order_qty:,} 個\n"
         f"- **優先度**: {priority}\n"
         f"- **理由**: {reason}\n"
+        f"{basis_line}"
         f"- **ステータス**: PENDING（承認待ち）\n\n"
         f"_※ Delta テーブル未構成のためデモモードで動作しています_"
     )
