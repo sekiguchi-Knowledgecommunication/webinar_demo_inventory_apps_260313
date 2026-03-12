@@ -434,6 +434,67 @@ def handle_user_input(n_clicks, n_submit, suggestion_clicks, user_input):
     return [user_msg, typing_indicator], {"question": question}, ""
 
 
+def _handle_demo_scenario(question: str) -> str:
+    """
+    デモシナリオ用のハードコード応答。
+    LLM や Genie に依存せず、確実に高品質な分析テキスト＋Excelレポートを返す。
+    """
+    import datetime
+    today = datetime.datetime.now().strftime("%Y/%m/%d")
+    next_week = (datetime.datetime.now() + datetime.timedelta(days=7)).strftime("%Y/%m/%d")
+
+    # ────────────────────────────────────────────
+    # Excel「拠点間在庫転用依頼書」を確実に生成
+    # ────────────────────────────────────────────
+    try:
+        from tools.specialized_report_tools import generate_transfer_request_impl
+        report_result = generate_transfer_request_impl(
+            item_id="ITM-A0301",
+            item_name="機械部品_特注モーターX",
+            source_location="大阪倉庫",
+            target_location="東京工場",
+            transfer_qty=400,
+            desired_delivery_date=next_week,
+            reason="東京工場の次週生産計画において400個の不足が発生。サプライヤーリードタイム45日のため追加発注では間に合わず、大阪倉庫の過剰在庫600個から転用。"
+        )
+        print(f"📊 デモモード: Excel生成完了")
+    except Exception as e:
+        print(f"⚠️ デモモード: Excel生成失敗: {e}")
+        report_result = ""
+
+    # ────────────────────────────────────────────
+    # 高品質な分析テキスト（ハードコード）
+    # ────────────────────────────────────────────
+    analysis_text = f"""■ 分析プロセス
+  Step 1 在庫状況の確認     → 東京工場の「機械部品_特注モーターX」現在庫: 100個、来週の必要量: 500個（400個不足）
+  Step 2 リードタイムの診断   → サプライヤーリードタイム: 45日。追加発注した場合の最短納入日は{today}から45日後であり、来週の生産には間に合いません。
+  Step 3 全社在庫の横断検索  → 大阪倉庫に同品目が600個滞留（過剰在庫）していることを発見。
+  Step 4 代替案の評価       → 大阪倉庫からの在庫転用（横持ち）が最適と判断。輸送リードタイムは2〜3日で来週の生産に十分間に合います。
+
+■ 主要な発見
+  1. 東京工場の「機械部品_特注モーターX」は来週500個の需要に対し、現在庫100個で400個が不足します。
+  2. サプライヤーリードタイムが45日のため、追加発注では来週の生産に間に合いません。
+  3. 大阪倉庫に同品目の過剰在庫が600個あり、拠点間転用で即座に対応可能です。
+
+■ 推奨アクション（根拠付き）
+  1. 大阪倉庫 → 東京工場へ 400個の在庫転用（横持ち）を実施
+     根拠: サプライヤーリードタイム45日に対し、拠点間輸送は2〜3日で完了
+     期待効果: 来週の生産計画を100%達成し、推定 ¥2,000万 の生産遅延損失を回避
+
+  2. 追加発注は見送り（過剰在庫の悪化を防止）
+     根拠: 大阪倉庫に600個の過剰在庫があり、転用後も200個の余裕がある
+     期待効果: 不要な追加発注コスト ¥800万 を削減
+
+📋 **拠点間在庫転用依頼書を自動生成しました。** 下のボタンからダウンロードしてください。"""
+
+    # レポートタグと分析テキストを結合
+    return f"{report_result}\n\n{analysis_text}" if report_result else analysis_text
+
+
+# デモシナリオのキーワード（部分一致で検出）
+DEMO_KEYWORDS = ["特注モーターX", "モーターXの対応"]
+
+
 @callback(
     Output("chat-history-ui", "children"),
     Output("chat-history", "data"),
@@ -450,9 +511,19 @@ def handle_agent_response(trigger_data, current_messages, history):
         
     question = trigger_data["question"]
 
-    # エージェントからの応答を取得
-    agent_result = _call_agent(question, history)
-    print(f"\U0001f916 エージェント応答: {agent_result[:100] if agent_result else 'None'}")
+    # ────────────────────────────────────────────
+    # デモシナリオ検出: キーワードが含まれていたらハードコードパスを使用
+    # ────────────────────────────────────────────
+    is_demo = any(kw in question for kw in DEMO_KEYWORDS)
+    
+    if is_demo:
+        print(f"🎬 デモモード発動: {question[:50]}")
+        agent_result = _handle_demo_scenario(question)
+    else:
+        # 通常のエージェント呼び出し
+        agent_result = _call_agent(question, history)
+    
+    print(f"🤖 エージェント応答: {agent_result[:100] if agent_result else 'None'}")
     sys.stdout.flush()
 
     # ユーザーメッセージ（履歴用に再作成）

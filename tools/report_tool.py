@@ -36,29 +36,16 @@ COLOR_CRITICAL_FG  = "DC2626"  # 赤文字
 
 from agents import function_tool
 
-@function_tool
-def generate_report(
+
+def generate_report_raw(
     report_title: str,
     headers: list,
     rows: list,
     summary: str,
 ) -> str:
     """
-    分析結果をリッチな Excel レポートとして保存する。
-
-    エージェントが Genie で取得したデータを整理し、
-    ユーザーがダウンロードできる Excel ファイルとして出力する。
-    タイトル行・ヘッダー行のカラー、交互背景色（ゼブラストライプ）、
-    数値フォーマットを適用した視覚的に分かりやすいレポートを生成する。
-
-    Args:
-        report_title: レポートのタイトル（例: \"過剰在庫分析レポート\"）
-        headers: 列ヘッダー行（例: [\"品目ID\", \"品目名\", \"在庫金額\"]）
-        rows: データ行のリスト（例: [[\"ITM-001\", \"電子部品A\", \"1200000\"], ...]）
-        summary: レポートのサマリテキスト
-
-    Returns:
-        レポートファイルのパスと概要を含むメッセージ
+    分析結果をリッチな Excel レポートとして保存する（素の Python 関数）。
+    app.py のデモモードや specialized_report_tools.py から直接呼び出し可能。
     """
     try:
         # ファイル名の生成（.xlsx 拡張子）
@@ -97,7 +84,6 @@ def generate_report(
         logger.info(f"📊 Excel レポート生成完了: {filepath} ({row_count} 行)")
 
         # サイドチャンネルにパスを記録
-        # LLM が [REPORT:...] タグを最終出力に含めなかった場合に app.py 側で使用する
         _LAST_GENERATED_REPORT["path"] = filepath
         _LAST_GENERATED_REPORT["filename"] = filename
 
@@ -115,6 +101,31 @@ def generate_report(
         import traceback
         traceback.print_exc()
         return f"⚠️ レポートの生成中にエラーが発生しました: {e}"
+
+
+@function_tool
+def generate_report(
+    report_title: str,
+    headers: list,
+    rows: list,
+    summary: str,
+) -> str:
+    """
+    分析結果をリッチな Excel レポートとして保存する。
+
+    エージェントが Genie で取得したデータを整理し、
+    ユーザーがダウンロードできる Excel ファイルとして出力する。
+
+    Args:
+        report_title: レポートのタイトル（例: \"過剰在庫分析レポート\"）
+        headers: 列ヘッダー行（例: [\"品目ID\", \"品目名\", \"在庫金額\"]）
+        rows: データ行のリスト（例: [[\"ITM-001\", \"電子部品A\", \"1200000\"], ...]）
+        summary: レポートのサマリテキスト
+
+    Returns:
+        レポートファイルのパスと概要を含むメッセージ
+    """
+    return generate_report_raw(report_title, headers, rows, summary)
 
 
 def _build_excel(
