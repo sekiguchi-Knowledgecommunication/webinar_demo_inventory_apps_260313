@@ -472,17 +472,23 @@ def handle_agent_response(trigger_data, current_messages, history):
     report_match = re.search(r'\[REPORT:(.*?)\]', agent_result)
     order_match = re.search(r'\[ORDER_PROPOSAL:(.*?)\]', agent_result)
     
+    clean_text = agent_result
+    if report_match:
+        clean_text = clean_text.replace(report_match.group(0), "").strip()
+    if order_match:
+        clean_text = clean_text.replace(order_match.group(0), "").strip()
+        
+    children.append(html.Pre(clean_text, style={
+        "whiteSpace": "pre-wrap", "wordWrap": "break-word",
+        "fontFamily": "var(--font-body)", "fontSize": "0.9rem", "lineHeight": "1.7",
+        "margin": "0 0 16px", "color": "var(--color-text-primary)",
+    }))
+    
     if report_match:
         filepath = report_match.group(1)
         filename = os.path.basename(filepath)
-        clean_text = agent_result.replace(report_match.group(0), "").strip()
         
         children.append(html.Div(children=[
-            html.Pre(clean_text, style={
-                "whiteSpace": "pre-wrap", "wordWrap": "break-word",
-                "fontFamily": "var(--font-body)", "fontSize": "0.9rem", "lineHeight": "1.7",
-                "margin": "0 0 16px", "color": "var(--color-text-primary)",
-            }),
             html.A(
                 html.Div([
                     html.Span("🟩 ", style={"fontSize": "1.2rem"}),
@@ -495,29 +501,25 @@ def handle_agent_response(trigger_data, current_messages, history):
                     "background": "#f0fdf4", "border": "2px solid #22c55e",
                     "borderRadius": "8px", "color": "#166534", "textDecoration": "none",
                     "fontWeight": "600", "boxShadow": "0 2px 6px rgba(34,197,94,0.15)",
+                    "marginBottom": "16px",
                 }
             )
         ]))
-    elif order_match:
+
+    if order_match:
         proposal_id = order_match.group(1)
-        clean_text = agent_result.replace(order_match.group(0), "").strip()
         
         children.append(html.Div(children=[
-            html.Pre(clean_text, style={
-                "whiteSpace": "pre-wrap", "wordWrap": "break-word",
-                "fontFamily": "var(--font-body)", "fontSize": "0.9rem", "lineHeight": "1.7",
-                "margin": "0 0 16px", "color": "var(--color-text-primary)",
-            }),
             html.Div([
-                html.Span("📝 発注提案登録完了", style={"fontWeight": "700", "color": "#075985"}),
+                html.Span("📝 発注/転用提案 登録完了", style={"fontWeight": "700", "color": "#075985"}),
                 html.Br(),
                 html.Span(f"提案ID: {proposal_id} - Delta テーブルに保存されました", style={"fontSize": "0.85rem", "color": "#0369a1"})
             ], style={
                 "padding": "12px 16px", "background": "#f0f9ff",
                 "borderLeft": "4px solid #0ea5e9", "borderRadius": "4px",
+                "marginBottom": "16px",
             })
         ]))
-    else:
         children.append(html.Pre(agent_result, style={
             "whiteSpace": "pre-wrap", "wordWrap": "break-word",
             "fontFamily": "var(--font-body)", "fontSize": "0.9rem", "lineHeight": "1.7",
@@ -568,31 +570,34 @@ def _call_agent(question: str, history: list) -> str:
         # 1. new_messages のツール出力テキストからタグを検索
         # 2. それでも見つからない場合は report_tool のサイドチャンネルを参照
         # ─────────────────────────────────────────────────────
-        if "[REPORT:" not in final_output and "[ORDER_PROPOSAL:" not in final_output:
-            tag_found = False
+        report_tag_found = "[REPORT:" in final_output
+        order_tag_found = "[ORDER_PROPOSAL:" in final_output
+        
+        if not report_tag_found or not order_tag_found:
             # ① new_messages から検索
             try:
                 for msg in result.new_messages:
                     msg_str = str(msg)
-                    tag_match = re.search(r'\[REPORT:([^\]]+)\]', msg_str)
-                    if tag_match:
-                        tag = f"[REPORT:{tag_match.group(1)}]"
-                        print(f"\U0001f527 new_messages からタグ補完: {tag}")
-                        final_output = f"{tag}\n\n{final_output}"
-                        tag_found = True
-                        break
-                    order_match = re.search(r'\[ORDER_PROPOSAL:([^\]]+)\]', msg_str)
-                    if order_match:
-                        tag = f"[ORDER_PROPOSAL:{order_match.group(1)}]"
-                        print(f"\U0001f527 new_messages からタグ補完: {tag}")
-                        final_output = f"{tag}\n\n{final_output}"
-                        tag_found = True
-                        break
+                    if not report_tag_found:
+                        tag_match = re.search(r'\[REPORT:([^\]]+)\]', msg_str)
+                        if tag_match:
+                            tag = f"[REPORT:{tag_match.group(1)}]"
+                            print(f"\U0001f527 new_messages からタグ補完: {tag}")
+                            final_output = f"{tag}\n\n{final_output}"
+                            report_tag_found = True
+                    
+                    if not order_tag_found:
+                        order_match = re.search(r'\[ORDER_PROPOSAL:([^\]]+)\]', msg_str)
+                        if order_match:
+                            tag = f"[ORDER_PROPOSAL:{order_match.group(1)}]"
+                            print(f"\U0001f527 new_messages からタグ補完: {tag}")
+                            final_output = f"{tag}\n\n{final_output}"
+                            order_tag_found = True
             except Exception as tag_err:
                 print(f"⚠️ new_messages スキャン中の例外（無視）: {tag_err}")
 
             # ② サイドチャンネル（report_tool._LAST_GENERATED_REPORT）を参照
-            if not tag_found:
+            if not report_tag_found:
                 try:
                     from tools.report_tool import _LAST_GENERATED_REPORT
                     if _LAST_GENERATED_REPORT.get("path"):
