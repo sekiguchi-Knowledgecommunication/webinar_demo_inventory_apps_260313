@@ -634,8 +634,16 @@ def download_file():
         from databricks.sdk import WorkspaceClient
         w = WorkspaceClient()
         # Workspace からファイルをメモリ上に読み込む
+        # _StreamingResponse の正しい API: .read() を使用
         response = w.workspace.download(filepath)
-        content = response.contents.read()
+        # Databricks SDK の _StreamingResponse は .read() で bytes を返す
+        if hasattr(response, "read"):
+            content = response.read()
+        elif hasattr(response, "contents"):
+            content = response.contents.read()
+        else:
+            # フォールバック: イテレータとして全チャンクを結合
+            content = b"".join(response)
         filename = os.path.basename(filepath)
         # Excel の場合は xlsx の MIME タイプ、それ以外は汎用バイナリ
         if filename.endswith(".xlsx"):
