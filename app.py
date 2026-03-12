@@ -543,6 +543,9 @@ def _call_agent(question: str, history: list) -> str:
     AI エージェントを直接呼び出す（公式パターン: AsyncDatabricksOpenAI）。
     Serving Endpoint を経由せず、アプリ内で Runner.run() を実行。
     エージェント未初期化時はフォールバック（ダミーデータ）。
+
+    LLM が [REPORT:...] / [ORDER_PROPOSAL:...] タグを省略して要約する場合に備え、
+    Runner.run() の実行履歴（new_messages）からタグを検索して final_output に付加する。
     """
     if not AGENT_AVAILABLE:
         print("\u26a0\ufe0f AGENT_AVAILABLE=False, Genie フォールバック")
@@ -557,8 +560,36 @@ def _call_agent(question: str, history: list) -> str:
         result = asyncio.run(
             Runner.run(inventory_agent, input=messages)
         )
-        print(f"\u2705 Runner.run 完了: final_output={result.final_output[:100] if result.final_output else 'None'}")
-        return result.final_output or "エージェントからの応答が空です。もう一度お試しください。"
+        final_output = result.final_output or "エージェントからの応答が空です。もう一度お試しください。"
+        print(f"\u2705 Runner.run 完了: final_output={final_output[:100]}")
+
+        # ─────────────────────────────────────────────────────
+        # LLM がタグを省略した場合のフォールバック:
+        # new_messages のツール出力から [REPORT:...] / [ORDER_PROPOSAL:...] を検索して付加
+        # ─────────────────────────────────────────────────────
+        if "[REPORT:" not in final_output and "[ORDER_PROPOSAL:" not in final_output:
+            try:
+                for msg in result.new_messages:
+                    msg_str = str(msg)
+                    # REPORT タグを検索
+                    tag_match = re.search(r'\[REPORT:([^\]]+)\]', msg_str)
+                    if tag_match:
+                        tag = f"[REPORT:{tag_match.group(1)}]"
+                        print(f"\U0001f527 ツール出力からタグを補完: {tag}")
+                        final_output = f"{tag}\n\n{final_output}"
+                        break
+                    # ORDER_PROPOSAL タグを検索
+                    order_match = re.search(r'\[ORDER_PROPOSAL:([^\]]+)\]', msg_str)
+                    if order_match:
+                        tag = f"[ORDER_PROPOSAL:{order_match.group(1)}]"
+                        print(f"\U0001f527 ツール出力からタグを補完: {tag}")
+                        final_output = f"{tag}\n\n{final_output}"
+                        break
+            except Exception as tag_err:
+                print(f"⚠️ タグ補完中の例外（無視）: {tag_err}")
+
+        return final_output
+
     except Exception as e:
         print(f"\u274c Runner.run エラー: {e}")
         import traceback
