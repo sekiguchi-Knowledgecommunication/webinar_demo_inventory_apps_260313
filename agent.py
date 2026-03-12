@@ -9,6 +9,15 @@ import os
 import logging
 import pathlib
 
+# ====================
+# SDK 回避用トリック
+# databricks-openai が内部で openai(v1) クライアントを初期化する際、
+# api_key が完全に未設定だと validation error を吐くためダミーを注入
+# （実際の認証は Databricks Token が使われます）
+# ====================
+if "OPENAI_API_KEY" not in os.environ:
+    os.environ["OPENAI_API_KEY"] = "dummy-token-for-databricks-openai"
+
 from databricks_openai import AsyncDatabricksOpenAI
 from agents import Agent, ModelSettings, Runner, function_tool
 from agents import set_default_openai_client, set_default_openai_api
