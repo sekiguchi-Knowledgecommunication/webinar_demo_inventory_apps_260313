@@ -485,15 +485,16 @@ def handle_agent_response(trigger_data, current_messages, history):
             }),
             html.A(
                 html.Div([
-                    html.Span("📊 ", style={"fontSize": "1.2rem"}),
-                    html.Span(f"{filename} をダウンロード", style={"fontWeight": "600"})
+                    html.Span("🟩 ", style={"fontSize": "1.2rem"}),
+                    html.Span(f"Excel レポートをダウンロード（{filename}）", style={"fontWeight": "600"})
                 ]),
                 href=f"/download?file={filepath}",
                 target="_blank",
                 style={
                     "display": "inline-block", "padding": "12px 20px",
-                    "background": "#f0fdf4", "border": "1px solid #bbf7d0",
+                    "background": "#f0fdf4", "border": "2px solid #22c55e",
                     "borderRadius": "8px", "color": "#166534", "textDecoration": "none",
+                    "fontWeight": "600", "boxShadow": "0 2px 6px rgba(34,197,94,0.15)",
                 }
             )
         ]))
@@ -572,11 +573,38 @@ server = app.server
 
 @server.route("/download")
 def download_file():
+    """
+    Workspace に保存された Excel レポートを Databricks SDK 経由で取得し、
+    ブラウザにバイナリ送信する。ローカルファイルシステムには依存しない。
+    """
+    import io as _io
     filepath = request.args.get("file")
-    if filepath and os.path.exists(filepath):
-        from flask import send_file
-        return send_file(filepath, as_attachment=True)
-    return "File not found", 404
+    if not filepath:
+        return "ファイルパスが指定されていません", 400
+
+    try:
+        from databricks.sdk import WorkspaceClient
+        w = WorkspaceClient()
+        # Workspace からファイルをメモリ上に読み込む
+        response = w.workspace.download(filepath)
+        content = response.contents.read()
+        filename = os.path.basename(filepath)
+        # Excel の場合は xlsx の MIME タイプ、それ以外は汎用バイナリ
+        if filename.endswith(".xlsx"):
+            mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        elif filename.endswith(".csv"):
+            mimetype = "text/csv; charset=utf-8-sig"
+        else:
+            mimetype = "application/octet-stream"
+        return send_file(
+            _io.BytesIO(content),
+            as_attachment=True,
+            download_name=filename,
+            mimetype=mimetype,
+        )
+    except Exception as e:
+        logger.error(f"ダウンロードエラー: {e}")
+        return f"ダウンロードに失敗しました: {e}", 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("DATABRICKS_APP_PORT", 8050))
