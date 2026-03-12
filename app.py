@@ -394,7 +394,7 @@ def handle_user_input(n_clicks, n_submit, suggestion_clicks, user_input):
             suggestions = [
                 "在庫の全体状況を分析して",
                 "過剰在庫のレポートを作成して",
-                "不足品目の発注提案を作成して",
+                "来週不足する特注モーターXの対応を提案して",
                 "カテゴリ別の回転率は？",
             ]
             question = suggestions[idx]
