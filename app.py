@@ -567,9 +567,29 @@ def _call_agent(question: str, history: list) -> str:
 
         # ─────────────────────────────────────────────────────
         # LLM がタグを省略した場合のフォールバック（多段階）:
-        # 1. new_messages のツール出力テキストからタグを検索
-        # 2. それでも見つからない場合は report_tool のサイドチャンネルを参照
+        # 1. raw function call のパース (LLMがツール実行をテキストで漏らした場合)
+        # 2. new_messages のツール出力テキストからタグを検索
+        # 3. それでも見つからない場合は report_tool のサイドチャンネルを参照
         # ─────────────────────────────────────────────────────
+        
+        # 0. LLMがツール呼び出しをXMLライクなテキストで出力してしまった場合のインターセプト
+        raw_func_match = re.search(r'<function=generate_report>(.*?)</function>', final_output, re.DOTALL)
+        if raw_func_match:
+            try:
+                import json
+                from tools.report_tool import generate_report
+                args_json = json.loads(raw_func_match.group(1))
+                print(f"🔧 生の関数呼び出しを検出。手動で実行します: {args_json.get('report_title')}")
+                
+                # 手動でツールを実行
+                report_result = generate_report(**args_json)
+                
+                # 出力テキストから生のXMLを消去し、代わりにタグを埋め込む
+                final_output = final_output.replace(raw_func_match.group(0), "")
+                final_output = f"{report_result}\n\n{final_output}"
+            except Exception as e:
+                print(f"⚠️ 生の関数呼び出しのパース・実行に失敗: {e}")
+
         report_tag_found = "[REPORT:" in final_output
         order_tag_found = "[ORDER_PROPOSAL:" in final_output
         
@@ -582,7 +602,7 @@ def _call_agent(question: str, history: list) -> str:
                         tag_match = re.search(r'\[REPORT:([^\]]+)\]', msg_str)
                         if tag_match:
                             tag = f"[REPORT:{tag_match.group(1)}]"
-                            print(f"\U0001f527 new_messages からタグ補完: {tag}")
+                            print(f"🔧 new_messages からタグ補完: {tag}")
                             final_output = f"{tag}\n\n{final_output}"
                             report_tag_found = True
                     
@@ -590,7 +610,7 @@ def _call_agent(question: str, history: list) -> str:
                         order_match = re.search(r'\[ORDER_PROPOSAL:([^\]]+)\]', msg_str)
                         if order_match:
                             tag = f"[ORDER_PROPOSAL:{order_match.group(1)}]"
-                            print(f"\U0001f527 new_messages からタグ補完: {tag}")
+                            print(f"🔧 new_messages からタグ補完: {tag}")
                             final_output = f"{tag}\n\n{final_output}"
                             order_tag_found = True
             except Exception as tag_err:
@@ -603,7 +623,7 @@ def _call_agent(question: str, history: list) -> str:
                     if _LAST_GENERATED_REPORT.get("path"):
                         path = _LAST_GENERATED_REPORT["path"]
                         tag = f"[REPORT:{path}]"
-                        print(f"\U0001f527 サイドチャンネルからタグ補完: {tag}")
+                        print(f"🔧 サイドチャンネルからタグ補完: {tag}")
                         final_output = f"{tag}\n\n{final_output}"
                         # 読み取り後はリセット
                         _LAST_GENERATED_REPORT.clear()
